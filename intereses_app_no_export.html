@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Intereses - Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #161625;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .bg-dark-card { background-color: #252538; }
+        .btn-orange { background-color: #f39c12; transition: all 0.2s; }
+        .btn-orange:hover { background-color: #e67e22; transform: scale(1.02); }
+
+        .grid-bg {
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .outline-btn { border: 1px solid #444; background: transparent; transition: all 0.2s; }
+        .outline-btn:hover { background: rgba(255,255,255,0.05); }
+        .outline-btn.active { border-color: #f39c12; background: rgba(243, 156, 18, 0.1); color: #f39c12; }
+        .outline-btn.active-blue { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            transition: box-shadow 0.3s, border-color 0.2s;
+            border: 2px solid rgba(255,255,255,0.2);
+            text-align: center;
+            z-index: 10;
+            pointer-events: all;
+        }
+        .bubble:active { cursor: grabbing; }
+        .bubble.highlight { border-color: #f39c12; box-shadow: 0 0 30px rgba(243, 156, 18, 0.4); }
+
+        .bubble-content {
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .bubble-controls {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 20;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50%;
+        }
+        .bubble:hover .bubble-controls { opacity: 1; }
+
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            padding: 6px;
+            transition: transform 0.2s, background 0.2s;
+            pointer-events: all;
+        }
+        .control-btn:hover { transform: scale(1.2); background: rgba(255,255,255,0.2); }
+
+        .resize-handle {
+            position: absolute;
+            bottom: 15%;
+            right: 15%;
+            width: 12px;
+            height: 12px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            cursor: nwse-resize;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 25;
+            pointer-events: all;
+        }
+        .bubble:hover .resize-handle { opacity: 1; }
+        .resize-handle:hover { background: #f39c12; }
+
+        #minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 180px;
+            height: 120px;
+            background: rgba(26, 26, 46, 0.8);
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 50;
+        }
+        #minimap-viewport {
+            position: absolute;
+            border: 1px solid #f39c12;
+            background: rgba(243, 156, 18, 0.1);
+            pointer-events: none;
+        }
+
+        #connection-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .scissors-cursor { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>'), auto !important; }
+
+        .modal-overlay {
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+        }
+
+        .view-container {
+            display: none;
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: #161625;
+            padding: 2rem;
+        }
+        .view-container.active { display: block; }
+
+        .active-nav {
+            background-color: #f39c12 !important;
+            color: #000 !important;
+        }
+
+        tr { border-bottom: 1px solid #2d2d44; }
+        th { text-align: left; color: #f39c12; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding: 1rem; }
+        td { padding: 1rem; }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-dot.selected { border-color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA 1: MENU PRINCIPAL -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen z-[100] relative">
+        <div class="bg-dark-card p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-800 text-center">
+            <div class="flex items-center justify-center mb-8 gap-4">
+                <div class="w-10 h-10 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                <h1 id="txt-app-title" class="text-3xl font-bold text-[#f39c12]">Mis Intereses</h1>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label id="txt-select-user" class="block text-sm text-gray-400 mb-2">Seleccionar Usuario:</label>
+                    <select id="user-selector" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12]">
+                    </select>
+                </div>
+
+                <div>
+                    <label id="txt-select-lang" class="block text-sm text-gray-400 mb-2">Idioma / Language:</label>
+                    <select id="language-selector" onchange="app.changeLanguage(this.value)" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12]">
+                        <option value="es">Español</option>
+                        <option value="en">English</option>
+                    </select>
+                </div>
+
+                <button id="txt-enter" onclick="app.showDashboard()" class="w-full btn-orange text-black font-bold py-3 rounded-lg text-lg shadow-lg">
+                    Entrar
+                </button>
+
+                <div class="space-y-3 pt-2">
+                    <button id="txt-create-user" onclick="app.createNewUser()" class="w-full outline-btn text-gray-300 py-3 rounded-lg hover:bg-white/5 transition">+ Crear Nuevo Usuario</button>
+                    <div class="flex gap-3">
+                        <button class="flex-1 outline-btn py-3 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition">
+                            <i data-lucide="hard-drive" class="w-4 h-4 text-pink-400"></i> <span id="txt-usb">USB</span>
+                        </button>
+                        <button class="flex-1 outline-btn py-3 rounded-lg text-sm flex items-center justify-center gap-2 hover:bg-white/5 transition">
+                            <i data-lucide="folder" class="w-4 h-4 text-orange-400"></i> <span id="txt-load">Cargar</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 2: DASHBOARD -->
+    <div id="dashboard-screen" class="hidden flex flex-col h-screen overflow-hidden">
+        <header class="bg-[#1a1a2e] border-b border-gray-800 p-4 flex items-center justify-between z-[60] shadow-md">
+            <div class="flex items-center gap-6">
+                <button onclick="app.checkUnsavedAndExit()" class="flex items-center gap-2 outline-btn px-4 py-2 rounded-lg text-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> <span id="txt-menu">Menú</span>
+                </button>
+                <div class="flex items-center gap-2">
+                    <span id="display-user-name" class="text-[#f39c12] font-semibold text-lg">Usuario Principal</span>
+                    <button onclick="app.openNameEditModal()" class="bg-[#2d2d44] p-1.5 rounded-full border border-gray-700 hover:bg-[#3d3d5a] transition">
+                        <i data-lucide="pencil" class="w-3 h-3 text-gray-400"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex bg-[#2d2d44] rounded-lg p-1 border border-gray-700">
+                <button id="nav-map" onclick="app.switchView('map')" class="px-6 py-1.5 rounded-md active-nav font-medium text-sm transition">Mapa</button>
+                <button id="nav-list" onclick="app.switchView('list')" class="px-6 py-1.5 rounded-md text-gray-400 font-medium text-sm hover:text-white transition">Lista</button>
+                <button id="nav-months" onclick="app.switchView('months')" class="px-6 py-1.5 rounded-md text-gray-400 font-medium text-sm hover:text-white transition">Meses</button>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="txt-save" onclick="app.saveChanges()" class="outline-btn text-white px-4 py-2 rounded-lg text-sm hover:bg-white/5 transition">
+                    Guardar cambios
+                </button>
+                <button id="txt-new-bubble" onclick="app.openModal()" class="btn-orange text-black font-bold px-6 py-2 rounded-lg text-sm">
+                    + Nueva Burbuja
+                </button>
+            </div>
+        </header>
+
+        <main id="main-content" class="flex-grow relative overflow-hidden">
+            <div id="viewport" class="w-full h-full bg-[#161625] grid-bg relative">
+                <svg id="connection-layer" width="100%" height="100%"></svg>
+                <div id="bubble-container"></div>
+
+                <div class="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-[70]">
+                    <button id="btn-plus" onclick="app.zoomIn()" class="w-10 h-10 bg-[#2d2d44] border border-gray-700 rounded-full flex items-center justify-center hover:bg-[#3d3d5a]"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></button>
+                    <button id="btn-minus" onclick="app.zoomOut()" class="w-10 h-10 bg-[#2d2d44] border border-gray-700 rounded-full flex items-center justify-center hover:bg-[#3d3d5a]"><i data-lucide="minus" class="w-5 h-5 text-gray-400"></i></button>
+                    <button id="btn-reset" onclick="app.resetView()" class="w-10 h-10 bg-[#2d2d44] border border-gray-700 rounded-full flex items-center justify-center hover:bg-[#3d3d5a]"><i data-lucide="crosshair" class="w-5 h-5 text-gray-400"></i></button>
+                    <div class="h-4"></div>
+                    <button id="pointer-tool" onclick="app.toggleScissors(false)" class="w-10 h-10 bg-[#2d2d44] border border-gray-700 rounded-full flex items-center justify-center hover:bg-[#3d3d5a] transition shadow-lg active-blue">
+                        <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+                    </button>
+                    <button id="scissors-tool" onclick="app.toggleScissors(true)" class="w-10 h-10 bg-[#2d2d44] border border-gray-700 rounded-full flex items-center justify-center hover:bg-red-900/30 transition shadow-lg">
+                        <i data-lucide="scissors" class="w-5 h-5 text-gray-400"></i>
+                    </button>
+                </div>
+
+                <div id="minimap">
+                    <canvas id="minimap-canvas"></canvas>
+                    <div id="minimap-viewport"></div>
+                </div>
+            </div>
+
+            <div id="view-list" class="view-container">
+                <div class="max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 id="txt-list-title" class="text-2xl font-bold text-[#f39c12]">Todos los Intereses</h2>
+                        <div class="flex gap-2">
+                            <button onclick="app.sortList('name')" class="outline-btn px-4 py-2 rounded-lg text-xs flex items-center gap-2"><i data-lucide="sort-asc" class="w-3 h-3"></i> <span id="txt-sort-name">Nombre</span></button>
+                            <button onclick="app.sortList('votes')" class="outline-btn px-4 py-2 rounded-lg text-xs flex items-center gap-2"><i data-lucide="star" class="w-3 h-3"></i> <span id="txt-sort-votes">Votos</span></button>
+                            <button onclick="app.sortList('category')" class="outline-btn px-4 py-2 rounded-lg text-xs flex items-center gap-2"><i data-lucide="tag" class="w-3 h-3"></i> <span id="txt-sort-category">Categoría</span></button>
+                            <button onclick="app.sortList('date')" class="outline-btn px-4 py-2 rounded-lg text-xs flex items-center gap-2"><i data-lucide="calendar" class="w-3 h-3"></i> <span id="txt-sort-date">Fecha</span></button>
+                        </div>
+                    </div>
+                    <div class="bg-dark-card rounded-2xl border border-gray-800 overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th id="th-name">Interés</th>
+                                    <th id="th-cat">Categoría</th>
+                                    <th id="th-votes">Votos</th>
+                                    <th id="th-date">Creado</th>
+                                    <th class="text-right" id="th-actions">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-months" class="view-container">
+                <div class="max-w-5xl mx-auto">
+                    <h2 id="txt-months-title" class="text-2xl font-bold text-[#f39c12] mb-8">Cronología de Actividad</h2>
+                    <div id="months-grid" class="space-y-6"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL BURBUJA -->
+    <div id="bubble-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[200] p-4">
+        <div class="bg-[#252538] w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h2 id="modal-title" class="text-xl font-bold text-[#f39c12]">Nuevo Interés</h2>
+                <button onclick="app.closeModal()" class="text-gray-500 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="edit-id">
+                <div>
+                    <label id="lbl-name" class="block text-xs text-gray-400 mb-1 uppercase tracking-wider">Nombre</label>
+                    <input type="text" id="interest-name" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12]">
+                </div>
+                <div>
+                    <label id="lbl-cat" class="block text-xs text-gray-400 mb-1 uppercase tracking-wider">Categoría</label>
+                    <input list="category-list" type="text" id="interest-category" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12]">
+                    <datalist id="category-list"></datalist>
+                </div>
+                <div>
+                    <label id="lbl-color" class="block text-xs text-gray-400 mb-1 uppercase tracking-wider">Color</label>
+                    <div class="space-y-2 bg-[#161625] p-3 rounded-lg border border-gray-700">
+                        <div id="preset-colors" class="flex flex-wrap gap-2 mb-2"></div>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="interest-color" value="#3498db" class="w-12 h-10 bg-transparent border-none cursor-pointer">
+                            <button id="btn-fav-color" onclick="app.saveFavoriteColor()" class="flex-grow text-[10px] outline-btn py-2 rounded uppercase tracking-tighter hover:text-white">Favorito</button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label id="lbl-desc" class="block text-xs text-gray-400 mb-1 uppercase tracking-wider">Descripción</label>
+                    <textarea id="interest-desc" rows="2" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12] resize-none"></textarea>
+                </div>
+                <div>
+                    <label id="lbl-size" class="block text-xs text-gray-400 mb-1 uppercase tracking-wider">Tamaño Manual</label>
+                    <input type="range" id="interest-size" min="0" max="100" value="0" class="w-full mt-3">
+                </div>
+            </div>
+            <div class="p-6 bg-[#1a1a2e] flex gap-3">
+                <button id="btn-save-bubble" onclick="app.saveBubble()" class="flex-grow btn-orange text-black font-bold py-3 rounded-lg">Guardar</button>
+                <button id="delete-btn" onclick="app.deleteBubble()" class="hidden px-4 bg-red-900/20 text-red-500 border border-red-900/50 rounded-lg hover:bg-red-900/40 transition"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDICIÓN NOMBRE USUARIO -->
+    <div id="user-name-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[250] p-4">
+        <div class="bg-[#252538] w-full max-w-sm rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+            <div class="p-6 border-b border-gray-800">
+                <h2 id="txt-edit-user-title" class="text-xl font-bold text-[#f39c12]">Cambiar nombre de usuario</h2>
+            </div>
+            <div class="p-6">
+                <input type="text" id="new-user-name" class="w-full bg-[#161625] border border-gray-700 rounded-lg p-3 outline-none focus:border-[#f39c12]">
+            </div>
+            <div class="p-6 bg-[#1a1a2e] flex gap-3">
+                <button id="txt-save-user" onclick="app.saveUserName()" class="flex-grow btn-orange text-black font-bold py-2 rounded-lg">Guardar</button>
+                <button id="txt-cancel-user" onclick="app.closeNameEditModal()" class="px-6 outline-btn py-2 rounded-lg text-gray-400">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL AVISO SIN GUARDAR -->
+    <div id="unsaved-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[300] p-4">
+        <div class="bg-[#252538] w-full max-w-sm rounded-2xl border border-red-900/50 overflow-hidden shadow-2xl">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i>
+                </div>
+                <h2 id="txt-unsaved-title" class="text-xl font-bold text-white mb-2">Cambios no guardados</h2>
+                <p id="txt-unsaved-desc" class="text-gray-400 text-sm">Hay cambios sin guardar. Si sales ahora, perderás todo el progreso.</p>
+            </div>
+            <div class="p-6 bg-[#1a1a2e] flex flex-col gap-3">
+                <button id="txt-exit-no-save" onclick="app.showLogin()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg">Salir sin guardar</button>
+                <button id="txt-continue-edit" onclick="app.closeUnsavedModal()" class="w-full outline-btn py-3 rounded-lg text-gray-400">Continuar editando</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            users: [],
+            currentUserIndex: 0,
+            bubbles: [],
+            links: [],
+            categories: [],
+            favoriteColors: [],
+            currentView: 'map',
+            lang: 'es',
+            zoom: 1,
+            panX: 0,
+            panY: 0,
+            isDragging: false,
+            dragTarget: null,
+            isResizing: false,
+            resizeTarget: null,
+            dragOffset: { x: 0, y: 0 },
+            isScissorsMode: false,
+            linkCandidate: null,
+            linkHoverTarget: null,
+            hoveredLinkIdx: null,
+            mousePos: { x: 0, y: 0 },
+            hasUnsavedChanges: false,
+
+            translations: {
+                es: {
+                    appTitle: "Mis Intereses", selectUser: "Seleccionar Usuario:", selectLang: "Idioma / Language:",
+                    enter: "Entrar", createUser: "+ Crear Nuevo Usuario", usb: "USB", load: "Cargar",
+                    menu: "Menú", map: "Mapa", list: "Lista", months: "Meses", save: "Guardar cambios",
+                    newBubble: "+ Nueva Burbuja", listTitle: "Todos los Intereses", sortName: "Nombre",
+                    sortVotes: "Votos", sortCat: "Categoría", sortDate: "Fecha", thName: "Interés",
+                    thCat: "Categoría", thVotes: "Votos", thDate: "Creado", thActions: "Acciones",
+                    newBubbleModal: "Nuevo Interés", editBubbleModal: "Editar Interés",
+                    lblNombre: "Nombre", lblCat: "Categoría", lblColor: "Color", lblFav: "Favorito",
+                    lblDesc: "Descripción", lblSize: "Tamaño Manual", btnSave: "Guardar",
+                    editUserTitle: "Cambiar nombre de usuario", unsavedTitle: "Cambios no guardados",
+                    unsavedDesc: "Hay cambios sin guardar. Si sales ahora, perderás todo el progreso.",
+                    btnExit: "Salir sin guardar", btnContinue: "Continuar editando", btnCancel: "Cancelar",
+                    noCat: "Sin categoría", created: "Creados", votesInMonth: "Votos acumulados este mes:",
+                    noActivity: "No hay actividad registrada todavía.", monthTitle: "Cronología de Actividad",
+                    tipPointer: "Puntero Normal", tipScissors: "Romper Uniones", tipPlus: "Zoom +", 
+                    tipMinus: "Zoom -", tipReset: "Restablecer Vista", tipVote: "Votar", 
+                    tipEdit: "Editar", tipLink: "Unir", tipNest: "Anidar"
+                },
+                en: {
+                    appTitle: "My Interests", selectUser: "Select User:", selectLang: "Language / Idioma:",
+                    enter: "Enter", createUser: "+ Create New User", usb: "USB", load: "Load",
+                    menu: "Menu", map: "Map", list: "List", months: "Months", save: "Save changes",
+                    newBubble: "+ New Bubble", listTitle: "All Interests", sortName: "Name",
+                    sortVotes: "Votes", sortCat: "Category", sortDate: "Date", thName: "Interest",
+                    thCat: "Category", thVotes: "Votes", thDate: "Created", thActions: "Actions",
+                    newBubbleModal: "New Interest", editBubbleModal: "Edit Interest",
+                    lblNombre: "Name", lblCat: "Category", lblColor: "Color", lblFav: "Favorite",
+                    lblDesc: "Description", lblSize: "Manual Size", btnSave: "Save",
+                    editUserTitle: "Change username", unsavedTitle: "Unsaved changes",
+                    unsavedDesc: "There are unsaved changes. If you exit now, you will lose your progress.",
+                    btnExit: "Exit without saving", btnContinue: "Continue editing", btnCancel: "Cancel",
+                    noCat: "No category", created: "Created", votesInMonth: "Votes in this month:",
+                    noActivity: "No activity recorded yet.", monthTitle: "Activity Timeline",
+                    tipPointer: "Normal Pointer", tipScissors: "Break Unions", tipPlus: "Zoom In", 
+                    tipMinus: "Zoom Out", tipReset: "Reset View", tipVote: "Vote", 
+                    tipEdit: "Edit", tipLink: "Link", tipNest: "Nest"
+                }
+            },
+
+            init() {
+                this.loadUsers();
+                this.renderUserSelector();
+                this.animate();
+                this.setupEventListeners();
+                this.applyLanguage();
+                lucide.createIcons();
+            },
+
+            changeLanguage(val) {
+                this.lang = val;
+                this.applyLanguage();
+                if (this.currentView === 'list') this.renderList();
+                if (this.currentView === 'months') this.renderMonths();
+                this.renderBubbles(); // Para actualizar tooltips en burbujas
+            },
+
+            applyLanguage() {
+                const t = this.translations[this.lang];
+                document.getElementById('txt-app-title').textContent = t.appTitle;
+                document.getElementById('txt-select-user').textContent = t.selectUser;
+                document.getElementById('txt-select-lang').textContent = t.selectLang;
+                document.getElementById('txt-enter').textContent = t.enter;
+                document.getElementById('txt-create-user').textContent = t.createUser;
+                document.getElementById('txt-usb').textContent = t.usb;
+                document.getElementById('txt-load').textContent = t.load;
+                document.getElementById('txt-menu').textContent = t.menu;
+                document.getElementById('nav-map').textContent = t.map;
+                document.getElementById('nav-list').textContent = t.list;
+                document.getElementById('nav-months').textContent = t.months;
+                document.getElementById('txt-save').textContent = t.save;
+                document.getElementById('txt-new-bubble').textContent = t.newBubble;
+                document.getElementById('txt-list-title').textContent = t.listTitle;
+                document.getElementById('txt-sort-name').textContent = t.sortName;
+                document.getElementById('txt-sort-votes').textContent = t.sortVotes;
+                document.getElementById('txt-sort-category').textContent = t.sortCat;
+                document.getElementById('txt-sort-date').textContent = t.sortDate;
+                document.getElementById('th-name').textContent = t.thName;
+                document.getElementById('th-cat').textContent = t.thCat;
+                document.getElementById('th-votes').textContent = t.thVotes;
+                document.getElementById('th-date').textContent = t.thDate;
+                document.getElementById('th-actions').textContent = t.thActions;
+                document.getElementById('lbl-name').textContent = t.lblNombre;
+                document.getElementById('lbl-cat').textContent = t.lblCat;
+                document.getElementById('lbl-color').textContent = t.lblColor;
+                document.getElementById('btn-fav-color').textContent = t.lblFav;
+                document.getElementById('lbl-desc').textContent = t.lblDesc;
+                document.getElementById('lbl-size').textContent = t.lblSize;
+                document.getElementById('btn-save-bubble').textContent = t.btnSave;
+                document.getElementById('txt-edit-user-title').textContent = t.editUserTitle;
+                document.getElementById('txt-save-user').textContent = t.btnSave;
+                document.getElementById('txt-cancel-user').textContent = t.btnCancel;
+                document.getElementById('txt-unsaved-title').textContent = t.unsavedTitle;
+                document.getElementById('txt-unsaved-desc').textContent = t.unsavedDesc;
+                document.getElementById('txt-exit-no-save').textContent = t.btnExit;
+                document.getElementById('txt-continue-edit').textContent = t.btnContinue;
+                document.getElementById('txt-months-title').textContent = t.monthTitle;
+
+                // Traducir Titles (Hints)
+                document.getElementById('pointer-tool').title = t.tipPointer;
+                document.getElementById('scissors-tool').title = t.tipScissors;
+                document.getElementById('btn-plus').title = t.tipPlus;
+                document.getElementById('btn-minus').title = t.tipMinus;
+                document.getElementById('btn-reset').title = t.tipReset;
+            },
+
+            loadUsers() {
+                const saved = localStorage.getItem('tracker_users_v4');
+                if (saved) {
+                    this.users = JSON.parse(saved);
+                } else {
+                    this.users = [{ id: Date.now(), name: "Usuario Principal", data: { bubbles: [], links: [], categories: ["Deportes", "Tecnología", "Arte", "Ciencia", "Salud"], favoriteColors: ["#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6"] } }];
+                    this.saveUsersToStorage();
+                }
+                const lastIdx = localStorage.getItem('tracker_last_user_idx');
+                if (lastIdx !== null && this.users[lastIdx]) this.currentUserIndex = parseInt(lastIdx);
+            },
+
+            saveUsersToStorage() { localStorage.setItem('tracker_users_v4', JSON.stringify(this.users)); },
+
+            renderUserSelector() {
+                const sel = document.getElementById('user-selector');
+                sel.innerHTML = '';
+                this.users.forEach((u, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index; opt.textContent = u.name;
+                    sel.appendChild(opt);
+                });
+                sel.value = this.currentUserIndex;
+                const createBtn = document.getElementById('txt-create-user');
+                if (createBtn) {
+                  if (this.users.length >= 3) createBtn.classList.add('opacity-50', 'pointer-events-none');
+                  else createBtn.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            },
+
+            createNewUser() {
+                if (this.users.length >= 3) return;
+                const name = `Nuevo Usuario ${this.users.length + 1}`;
+                this.users.push({ id: Date.now(), name, data: { bubbles: [], links: [], categories: ["Deportes", "Tecnología", "Arte", "Ciencia", "Salud"], favoriteColors: ["#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6"] } });
+                this.saveUsersToStorage();
+                this.renderUserSelector();
+                this.currentUserIndex = this.users.length - 1;
+                document.getElementById('user-selector').value = this.currentUserIndex;
+                lucide.createIcons();
+            },
+
+            switchView(viewName) {
+                this.currentView = viewName;
+                const vp = document.getElementById('viewport');
+                if (vp) vp.style.display = viewName === 'map' ? 'block' : 'none';
+                document.getElementById('view-list').classList.toggle('active', viewName === 'list');
+                document.getElementById('view-months').classList.toggle('active', viewName === 'months');
+                document.getElementById('nav-map').classList.toggle('active-nav', viewName === 'map');
+                document.getElementById('nav-list').classList.toggle('active-nav', viewName === 'list');
+                document.getElementById('nav-months').classList.toggle('active-nav', viewName === 'months');
+                if (viewName === 'list') this.renderList();
+                if (viewName === 'months') this.renderMonths();
+                lucide.createIcons();
+            },
+
+            renderList() {
+                const tbody = document.getElementById('list-tbody');
+                tbody.innerHTML = '';
+                this.bubbles.forEach(b => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="font-bold">${b.name}</td>
+                        <td><span class="px-2 py-1 bg-[#1a1a2e] border border-gray-700 rounded text-xs">${b.category || this.translations[this.lang].noCat}</span></td>
+                        <td><div class="flex items-center gap-1 text-[#f39c12] font-bold"><i data-lucide="star" class="w-3 h-3 fill-[#f39c12]"></i> ${b.votes}</div></td>
+                        <td class="text-gray-500 text-xs">${new Date(b.id).toLocaleDateString()}</td>
+                        <td class="text-right"><button onclick="app.openModal(${b.id})" class="p-2 hover:text-[#f39c12] transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                lucide.createIcons();
+            },
+
+            sortList(criteria) {
+                if (criteria === 'name') this.bubbles.sort((a, b) => a.name.localeCompare(b.name));
+                if (criteria === 'votes') this.bubbles.sort((a, b) => b.votes - a.votes);
+                if (criteria === 'category') this.bubbles.sort((a, b) => (a.category || '').localeCompare(b.category || ''));
+                if (criteria === 'date') this.bubbles.sort((a, b) => b.id - a.id);
+                this.renderList();
+            },
+
+            renderMonths() {
+                const container = document.getElementById('months-grid');
+                container.innerHTML = '';
+                const t = this.translations[this.lang];
+                const monthsData = {};
+                this.bubbles.forEach(b => {
+                    const date = new Date(b.id);
+                    const key = `${date.getFullYear()}-${date.getMonth()}`;
+                    if (!monthsData[key]) monthsData[key] = { created: [], totalVotes: 0 };
+                    monthsData[key].created.push(b);
+                    monthsData[key].totalVotes += b.votes;
+                });
+                const sortedKeys = Object.keys(monthsData).sort().reverse();
+                if (sortedKeys.length === 0) {
+                    container.innerHTML = `<p class="text-gray-500 text-center py-20">${t.noActivity}</p>`;
+                    return;
+                }
+                sortedKeys.forEach(key => {
+                    const [year, month] = key.split('-');
+                    const monthName = new Date(year, month).toLocaleString(this.lang, { month: 'long', year: 'numeric' });
+                    const div = document.createElement('div');
+                    div.className = 'bg-dark-card p-6 rounded-2xl border border-gray-800';
+                    div.innerHTML = `
+                        <h3 class="text-lg font-bold text-white mb-4 capitalize border-b border-gray-800 pb-2">${monthName}</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div><h4 class="text-xs text-gray-500 uppercase mb-2">${t.created}</h4>
+                            <div class="space-y-2">${monthsData[key].created.map(b => `<div class="flex items-center justify-between bg-[#161625] p-2 rounded border border-gray-800 text-sm"><span>${b.name}</span> <span class="text-[10px] text-[#f39c12]">${b.category || ''}</span></div>`).join('')}</div></div>
+                            <div><h4 class="text-xs text-gray-500 uppercase mb-2">${t.thVotes}</h4><p class="text-sm text-gray-400">${t.votesInMonth} ${monthsData[key].totalVotes}</p></div>
+                        </div>`;
+                    container.appendChild(div);
+                });
+            },
+
+            showDashboard() {
+                const sel = document.getElementById('user-selector');
+                this.currentUserIndex = parseInt(sel.value);
+                localStorage.setItem('tracker_last_user_idx', this.currentUserIndex);
+                const user = this.users[this.currentUserIndex];
+                this.bubbles = JSON.parse(JSON.stringify(user.data.bubbles || []));
+                this.links = JSON.parse(JSON.stringify(user.data.links || []));
+                this.categories = JSON.parse(JSON.stringify(user.data.categories || ["Deportes", "Tecnología", "Arte", "Ciencia", "Salud"]));
+                this.favoriteColors = JSON.parse(JSON.stringify(user.data.favoriteColors || ["#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6"]));
+                this.hasUnsavedChanges = false;
+                document.getElementById('display-user-name').textContent = user.name;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard-screen').classList.remove('hidden');
+                this.updateCategoryList();
+                this.switchView('map');
+                this.resetView();
+                this.renderBubbles();
+                this.applyLanguage();
+            },
+
+            showLogin() {
+                this.closeUnsavedModal();
+                document.getElementById('dashboard-screen').classList.add('hidden');
+                document.getElementById('login-screen').classList.remove('hidden');
+                this.renderUserSelector();
+                lucide.createIcons();
+            },
+
+            saveChanges() {
+                this.users[this.currentUserIndex].data = {
+                    bubbles: JSON.parse(JSON.stringify(this.bubbles)),
+                    links: JSON.parse(JSON.stringify(this.links)),
+                    categories: JSON.parse(JSON.stringify(this.categories)),
+                    favoriteColors: JSON.parse(JSON.stringify(this.favoriteColors))
+                };
+                this.saveUsersToStorage();
+                this.hasUnsavedChanges = false;
+            },
+
+            checkUnsavedAndExit() {
+                if (this.hasUnsavedChanges) document.getElementById('unsaved-modal').classList.remove('hidden');
+                else this.showLogin();
+            },
+
+            closeUnsavedModal() { document.getElementById('unsaved-modal').classList.add('hidden'); },
+
+            updateCategoryList() {
+                const list = document.getElementById('category-list');
+                list.innerHTML = '';
+                this.categories.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c; list.appendChild(opt);
+                });
+            },
+
+            addCategory(name) {
+                if (name && !this.categories.includes(name)) {
+                    this.categories.push(name);
+                    this.updateCategoryList();
+                }
+            },
+
+            saveFavoriteColor() {
+                const color = document.getElementById('interest-color').value;
+                if (!this.favoriteColors.includes(color)) {
+                    this.favoriteColors.push(color);
+                    this.renderPresetColors();
+                }
+            },
+
+            renderPresetColors() {
+                const container = document.getElementById('preset-colors');
+                container.innerHTML = '';
+                this.favoriteColors.forEach(c => {
+                    const dot = document.createElement('div');
+                    dot.className = 'color-dot';
+                    dot.style.backgroundColor = c;
+                    dot.onclick = () => document.getElementById('interest-color').value = c;
+                    container.appendChild(dot);
+                });
+            },
+
+            openModal(id = null) {
+                const modal = document.getElementById('bubble-modal');
+                const title = document.getElementById('modal-title');
+                const delBtn = document.getElementById('delete-btn');
+                const t = this.translations[this.lang];
+                modal.classList.remove('hidden');
+                this.renderPresetColors();
+                if (id) {
+                    const b = this.bubbles.find(b => b.id === id);
+                    title.innerText = t.editBubbleModal;
+                    document.getElementById('edit-id').value = id;
+                    document.getElementById('interest-name').value = b.name;
+                    document.getElementById('interest-category').value = b.category || '';
+                    document.getElementById('interest-desc').value = b.desc;
+                    document.getElementById('interest-color').value = b.color;
+                    document.getElementById('interest-size').value = b.manualSize;
+                    delBtn.classList.remove('hidden');
+                } else {
+                    title.innerText = t.newBubbleModal;
+                    document.getElementById('edit-id').value = "";
+                    document.getElementById('interest-name').value = "";
+                    document.getElementById('interest-category').value = "";
+                    document.getElementById('interest-desc').value = "";
+                    document.getElementById('interest-color').value = "#3498db";
+                    document.getElementById('interest-size').value = 0;
+                    delBtn.classList.add('hidden');
+                }
+                lucide.createIcons();
+            },
+
+            closeModal() { document.getElementById('bubble-modal').classList.add('hidden'); },
+
+            saveBubble() {
+                const id = document.getElementById('edit-id').value;
+                const name = document.getElementById('interest-name').value || "Interés";
+                const category = document.getElementById('interest-category').value.trim();
+                const desc = document.getElementById('interest-desc').value;
+                const color = document.getElementById('interest-color').value;
+                const manualSize = parseInt(document.getElementById('interest-size').value);
+                if (category) this.addCategory(category);
+                if (id) {
+                    const b = this.bubbles.find(b => b.id == id);
+                    b.name = name; b.category = category; b.desc = desc; b.color = color; b.manualSize = manualSize;
+                } else {
+                    const v = document.getElementById('viewport');
+                    let spawnX = -this.panX + (v.clientWidth / 2) / this.zoom;
+                    let spawnY = -this.panY + (v.clientHeight / 2) / this.zoom;
+                    let attempts = 0;
+                    while (attempts < 50) {
+                        const overlapping = this.bubbles.some(b => {
+                            const dx = b.x - spawnX, dy = b.y - spawnY;
+                            return Math.sqrt(dx*dx + dy*dy) < (this.getBubbleRadius(b) + 60);
+                        });
+                        if (!overlapping) break;
+                        spawnX += (Math.random() - 0.5) * 200; spawnY += (Math.random() - 0.5) * 200;
+                        attempts++;
+                    }
+                    this.bubbles.push({ id: Date.now(), name, category, desc, color, votes: 0, manualSize, x: spawnX, y: spawnY, vx: 0, vy: 0 });
+                }
+                this.hasUnsavedChanges = true;
+                this.closeModal(); this.renderBubbles();
+            },
+
+            deleteBubble() {
+                const id = document.getElementById('edit-id').value;
+                this.bubbles = this.bubbles.filter(b => b.id != id);
+                this.links = this.links.filter(l => l.source != id && l.target != id);
+                this.hasUnsavedChanges = true; this.closeModal(); this.renderBubbles();
+            },
+
+            createNestedBubble(parentId, e) {
+                e.stopPropagation();
+                const parent = this.bubbles.find(b => b.id === parentId);
+                const id = Date.now();
+                const angle = Math.random() * Math.PI * 2;
+                const dist = 220;
+                const newB = { id, name: "Sub-Interés", category: parent.category, desc: "", color: parent.color, votes: 0, manualSize: 0, x: parent.x + Math.cos(angle) * dist, y: parent.y + Math.sin(angle) * dist, vx: 0, vy: 0 };
+                this.bubbles.push(newB); this.links.push({ source: parentId, target: id });
+                this.hasUnsavedChanges = true; this.renderBubbles();
+            },
+
+            voteBubble(id, e) {
+                e.stopPropagation();
+                const b = this.bubbles.find(b => b.id === id);
+                const monthKey = `vote_${id}_${new Date().getFullYear()}-${new Date().getMonth()}`;
+                if (localStorage.getItem(monthKey)) return;
+                b.votes++; localStorage.setItem(monthKey, "true");
+                this.hasUnsavedChanges = true; this.renderBubbles();
+            },
+
+            animate() {
+                this.updatePhysics();
+                this.drawConnections();
+                this.updateBubblePositions();
+                this.updateMinimap();
+                requestAnimationFrame(() => this.animate());
+            },
+
+            updatePhysics() {
+                const friction = 0.85;
+                const v = document.getElementById('viewport');
+                if (!v) return;
+                const rect = v.getBoundingClientRect();
+
+                if (this.dragTarget && !this.isResizing) {
+                    const worldX = ((this.mousePos.x) / this.zoom) - this.panX;
+                    const worldY = ((this.mousePos.y) / this.zoom) - this.panY;
+                    this.dragTarget.x = worldX - this.dragOffset.x;
+                    this.dragTarget.y = worldY - this.dragOffset.y;
+                    this.dragTarget.vx = 0;
+                    this.dragTarget.vy = 0;
+                    this.hasUnsavedChanges = true;
+                } else if (this.isResizing && this.resizeTarget) {
+                    const worldX = (this.mousePos.x / this.zoom) - this.panX;
+                    const worldY = (this.mousePos.y / this.zoom) - this.panY;
+                    const dx = worldX - this.resizeTarget.x;
+                    const dy = worldY - this.resizeTarget.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const currentMinR = 50 + (this.resizeTarget.votes * 1.5);
+                    this.resizeTarget.manualSize = Math.max(0, Math.min(100, ((dist - currentMinR) / (150 - currentMinR)) * 100));
+                    this.hasUnsavedChanges = true;
+                }
+
+                for (let i = 0; i < this.bubbles.length; i++) {
+                    let b1 = this.bubbles[i];
+                    for (let j = i + 1; j < this.bubbles.length; j++) {
+                        let b2 = this.bubbles[j];
+                        let dx = b2.x - b1.x, dy = b2.y - b1.y, dist = Math.sqrt(dx * dx + dy * dy);
+                        let minDist = this.getBubbleRadius(b1) + this.getBubbleRadius(b2) + 10;
+                        if (dist < minDist && dist > 0) {
+                            let overlap = minDist - dist, nx = dx / dist, ny = dy / dist;
+                            if (this.dragTarget === b1 || this.resizeTarget === b1) { b2.x += nx * overlap; b2.y += ny * overlap; b2.vx += nx * 2; b2.vy += ny * 2; }
+                            else if (this.dragTarget === b2 || this.resizeTarget === b2) { b1.x -= nx * overlap; b1.y -= ny * overlap; b1.vx -= nx * 2; b1.vy -= ny * 2; }
+                            else { b1.x -= nx * overlap * 0.5; b1.y -= ny * overlap * 0.5; b2.x += nx * overlap * 0.5; b2.y += ny * overlap * 0.5; b1.vx -= nx; b1.vy -= ny; b2.vx += nx; b2.vy += ny; }
+                        }
+                    }
+                    this.links.forEach(l => {
+                        let s = this.bubbles.find(b => b.id === l.source), t = this.bubbles.find(b => b.id === l.target);
+                        if (!s || !t) return;
+                        let dx = t.x - s.x, dy = t.y - s.y, dist = Math.sqrt(dx * dx + dy * dy), desired = 250;
+                        if (dist > desired) {
+                            let f = (dist - desired) * 0.005;
+                            if (this.dragTarget !== s && this.resizeTarget !== s) { s.vx += (dx / dist) * f; s.vy += (dy / dist) * f; }
+                            if (this.dragTarget !== t && this.resizeTarget !== t) { t.vx -= (dx / dist) * f; t.vy -= (dy / dist) * f; }
+                        }
+                    });
+                    if (b1 !== this.dragTarget && b1 !== this.resizeTarget) { b1.x += b1.vx; b1.y += b1.vy; b1.vx *= friction; b1.vy *= friction; }
+                }
+            },
+
+            getBubbleRadius(b) {
+                let minR = 50 + (b.votes * 1.5);
+                return Math.min(minR + ( (150 - minR) * (b.manualSize / 100) ), 150);
+            },
+
+            renderBubbles() {
+                const container = document.getElementById('bubble-container');
+                container.innerHTML = '';
+                const t = this.translations[this.lang];
+                this.bubbles.forEach(b => {
+                    const r = this.getBubbleRadius(b);
+                    const el = document.createElement('div');
+                    el.className = 'bubble'; el.id = `b-${b.id}`;
+                    el.style.width = el.style.height = `${r * 2}px`;
+                    el.style.backgroundColor = b.color + '33'; el.style.borderColor = b.color;
+                    const monthKey = `vote_${b.id}_${new Date().getFullYear()}-${new Date().getMonth()}`;
+                    const hasVoted = localStorage.getItem(monthKey);
+                    el.innerHTML = `
+                        <div class="bubble-content flex flex-col items-center justify-center">
+                            <span class="bubble-label text-sm uppercase">${b.name}</span>
+                            <div class="flex items-center gap-1 mt-1 vote-info">
+                                <i data-lucide="star" class="star-icon ${hasVoted ? 'fill-[#f39c12] text-[#f39c12]' : 'text-gray-400'}"></i>
+                                <span class="vote-count font-bold">${b.votes}</span>
+                            </div>
+                        </div>
+                        <div class="bubble-controls">
+                            <button class="control-btn" onclick="app.voteBubble(${b.id}, event)" title="${t.tipVote}"><i data-lucide="star" class="w-4 h-4 text-[#f39c12]"></i></button>
+                            <button class="control-btn" onclick="app.openModal(${b.id})" title="${t.tipEdit}"><i data-lucide="pencil" class="w-4 h-4 text-white"></i></button>
+                            <button class="control-btn" onmousedown="app.startLinking(${b.id}, event)" title="${t.tipLink}"><i data-lucide="link" class="w-4 h-4 text-blue-400"></i></button>
+                            <button class="control-btn" onclick="app.createNestedBubble(${b.id}, event)" title="${t.tipNest}"><i data-lucide="plus-circle" class="w-4 h-4 text-green-400"></i></button>
+                        </div>
+                        <div class="resize-handle" onmousedown="app.startResizing(${b.id}, event)"></div>`;
+                    el.onmousedown = (e) => {
+                        if (e.target.closest('button') || e.target.classList.contains('resize-handle')) return;
+                        if (this.isScissorsMode) return;
+                        this.dragTarget = b;
+                        const v = document.getElementById('viewport'); const rect = v.getBoundingClientRect();
+                        const worldX = ((e.clientX - rect.left) / this.zoom) - this.panX;
+                        const worldY = ((e.clientY - rect.top) / this.zoom) - this.panY;
+                        this.dragOffset = { x: worldX - b.x, y: worldY - b.y };
+                        e.stopPropagation();
+                    };
+                    el.onmouseenter = () => { if(this.linkCandidate && this.linkCandidate !== b.id) this.linkHoverTarget = b.id; };
+                    el.onmouseleave = () => { if(this.linkHoverTarget === b.id) this.linkHoverTarget = null; };
+                    el.ondblclick = (e) => { e.stopPropagation(); this.openModal(b.id); };
+                    container.appendChild(el);
+                });
+                lucide.createIcons();
+            },
+
+            updateBubblePositions() {
+                this.bubbles.forEach(b => {
+                    const el = document.getElementById(`b-${b.id}`);
+                    if (el) {
+                        const r = this.getBubbleRadius(b);
+                        el.style.width = el.style.height = `${r * 2}px`;
+                        el.style.transform = `translate(${(b.x + this.panX) * this.zoom - r}px, ${(b.y + this.panY) * this.zoom - r}px) scale(${this.zoom})`;
+                        
+                        // Actualizar textos e iconos en tiempo real
+                        const label = el.querySelector('.bubble-label');
+                        const voteCount = el.querySelector('.vote-count');
+                        const starIcon = el.querySelector('.star-icon');
+                        
+                        if (label) label.style.fontSize = `${Math.max(10, r/5)}px`;
+                        if (voteCount) voteCount.style.fontSize = `${Math.max(8, r/10)}px`;
+                        if (starIcon) {
+                            const iconSize = Math.max(8, r/10);
+                            starIcon.style.width = `${iconSize}px`;
+                            starIcon.style.height = `${iconSize}px`;
+                        }
+
+                        if (this.linkHoverTarget === b.id || (this.linkCandidate === b.id)) el.classList.add('highlight');
+                        else el.classList.remove('highlight');
+                    }
+                });
+            },
+
+            drawConnections() {
+                const svg = document.getElementById('connection-layer');
+                if (!svg) return;
+                svg.innerHTML = '';
+                this.links.forEach((l) => {
+                    const s = this.bubbles.find(b => b.id === l.source), t = this.bubbles.find(b => b.id === l.target);
+                    if (s && t) this.drawLine(svg, s, t, l);
+                });
+                if (this.linkCandidate) {
+                    const s = this.bubbles.find(b => b.id === this.linkCandidate);
+                    let targetPoint;
+                    if (this.linkHoverTarget) targetPoint = this.bubbles.find(b => b.id === this.linkHoverTarget);
+                    else targetPoint = { x: (this.mousePos.x / this.zoom) - this.panX, y: (this.mousePos.y / this.zoom) - this.panY, isMouse: true };
+                    this.drawLine(svg, s, targetPoint, null, true);
+                }
+            },
+
+            drawLine(svg, s, t, linkObj, isTemp = false) {
+                const dx = t.x - s.x, dy = t.y - s.y, dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist === 0) return;
+                const rS = this.getBubbleRadius(s), rT = t.isMouse ? 0 : this.getBubbleRadius(t);
+                const x1 = s.x + (dx / dist) * rS, y1 = s.y + (dy / dist) * rS;
+                const x2 = t.x - (dx / dist) * rT, y2 = t.y - (dy / dist) * rT;
+                const isHoveredLink = this.isScissorsMode && this.hoveredLinkIdx === linkObj;
+                const color = isTemp ? "#3b82f6" : (this.isScissorsMode ? (isHoveredLink ? "#ef4444" : "#e74c3c88") : s.color);
+                if (this.isScissorsMode && !isTemp) {
+                    const hitbox = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    hitbox.setAttribute("x1", (x1 + this.panX) * this.zoom); hitbox.setAttribute("y1", (y1 + this.panY) * this.zoom);
+                    hitbox.setAttribute("x2", (x2 + this.panX) * this.zoom); hitbox.setAttribute("y2", (y2 + this.panY) * this.zoom);
+                    hitbox.setAttribute("stroke", "rgba(0,0,0,0.01)"); hitbox.setAttribute("stroke-width", 25 * this.zoom);
+                    hitbox.style.cursor = "pointer"; hitbox.style.pointerEvents = "all";
+                    hitbox.onmouseenter = () => { this.hoveredLinkIdx = linkObj; };
+                    hitbox.onmouseleave = () => { if(this.hoveredLinkIdx === linkObj) this.hoveredLinkIdx = null; };
+                    hitbox.onmousedown = (e) => {
+                        e.stopPropagation();
+                        if (this.isScissorsMode && this.hoveredLinkIdx === linkObj) {
+                            this.links = this.links.filter(l => l !== linkObj);
+                            this.hasUnsavedChanges = true;
+                            this.hoveredLinkIdx = null;
+                        }
+                    };
+                    svg.appendChild(hitbox);
+                }
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", (x1 + this.panX) * this.zoom); line.setAttribute("y1", (y1 + this.panY) * this.zoom);
+                line.setAttribute("x2", (x2 + this.panX) * this.zoom); line.setAttribute("y2", (y2 + this.panY) * this.zoom);
+                line.setAttribute("stroke", color); line.setAttribute("stroke-width", (isTemp || this.linkHoverTarget || isHoveredLink ? 4 : 2) * this.zoom);
+                if (this.isScissorsMode && !isTemp) line.setAttribute("stroke-dasharray", "5,5");
+                if (isTemp) line.setAttribute("stroke-dasharray", "4,4");
+                svg.appendChild(line);
+            },
+
+            setupEventListeners() {
+                const v = document.getElementById('viewport'); if (!v) return;
+                v.onmousedown = (e) => { if (e.target.id === 'viewport' || e.target.id === 'bubble-container' || e.target.tagName === 'svg') { this.isDragging = true; this.dragStart = { x: e.clientX - this.panX * this.zoom, y: e.clientY - this.panY * this.zoom }; } };
+                window.oncontextmenu = (e) => { if (this.isScissorsMode) { e.preventDefault(); this.toggleScissors(false); } };
+                window.onmousemove = (e) => {
+                    const rect = v.getBoundingClientRect(); this.mousePos = { x: (e.clientX - rect.left), y: (e.clientY - rect.top) };
+                    if (this.isDragging && !this.dragTarget) { this.panX = (e.clientX - this.dragStart.x) / this.zoom; this.panY = (e.clientY - this.dragStart.y) / this.zoom; }
+                };
+                window.onmouseup = () => {
+                    if (this.linkCandidate && this.linkHoverTarget && this.linkHoverTarget !== this.linkCandidate) { this.links.push({ source: this.linkCandidate, target: this.linkHoverTarget }); this.hasUnsavedChanges = true; }
+                    this.isDragging = false; this.dragTarget = null; this.isResizing = false; this.resizeTarget = null; this.linkCandidate = null; this.linkHoverTarget = null;
+                };
+                v.onwheel = (e) => { e.preventDefault(); this.zoom = Math.min(Math.max(this.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.2), 3); };
+            },
+
+            startLinking(sourceId, e) { e.stopPropagation(); this.linkCandidate = sourceId; },
+            startResizing(id, e) { e.stopPropagation(); this.isResizing = true; this.resizeTarget = this.bubbles.find(b => b.id === id); },
+
+            toggleScissors(active) {
+                this.isScissorsMode = active;
+                const sBtn = document.getElementById('scissors-tool'), pBtn = document.getElementById('pointer-tool'), view = document.getElementById('viewport');
+                if (active) { sBtn.classList.add('active', 'bg-red-600/20'); pBtn.classList.remove('active-blue'); view.classList.add('scissors-cursor'); }
+                else { pBtn.classList.add('active-blue'); sBtn.classList.remove('active', 'bg-red-600/20'); view.classList.remove('scissors-cursor'); this.hoveredLinkIdx = null; }
+                lucide.createIcons();
+            },
+
+            zoomIn() { this.zoom = Math.min(this.zoom * 1.2, 3); },
+            zoomOut() { this.zoom = Math.max(this.zoom * 0.8, 0.2); },
+            resetView() { this.zoom = 1; this.panX = 0; this.panY = 0; this.renderBubbles(); },
+
+            updateMinimap() {
+                const canvas = document.getElementById('minimap-canvas'), ctx = canvas.getContext('2d'), vp = document.getElementById('minimap-viewport'); if (!canvas) return;
+                canvas.width = 180; canvas.height = 120; ctx.clearRect(0,0,180,120); if (this.bubbles.length === 0) return;
+                const factor = 0.05, offX = 90, offY = 60;
+                this.links.forEach(l => {
+                    const s = this.bubbles.find(b => b.id === l.source), t = this.bubbles.find(b => b.id === l.target);
+                    if(s && t) { ctx.strokeStyle = "#444"; ctx.beginPath(); ctx.moveTo(s.x * factor + offX, s.y * factor + offY); ctx.lineTo(t.x * factor + offX, t.y * factor + offY); ctx.stroke(); }
+                });
+                this.bubbles.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x * factor + offX, b.y * factor + offY, 3, 0, Math.PI * 2); ctx.fill(); });
+                vp.style.width = `${(window.innerWidth / this.zoom) * factor}px`; vp.style.height = `${(window.innerHeight / this.zoom) * factor}px`;
+                vp.style.left = `${(-this.panX) * factor + offX}px`; vp.style.top = `${(-this.panY) * factor + offY}px`;
+            },
+
+            openNameEditModal() { const modal = document.getElementById('user-name-modal'); const input = document.getElementById('new-user-name'); input.value = this.users[this.currentUserIndex].name; modal.classList.remove('hidden'); },
+            closeNameEditModal() { document.getElementById('user-name-modal').classList.add('hidden'); },
+            saveUserName() { const newName = document.getElementById('new-user-name').value.trim(); if (newName) { this.users[this.currentUserIndex].name = newName; document.getElementById('display-user-name').textContent = newName; this.saveUsersToStorage(); this.closeNameEditModal(); } }
+        };
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
