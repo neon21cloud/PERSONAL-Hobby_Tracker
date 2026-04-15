@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Intereses - Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-color: #161625; --card-bg: #252538; --text-color: #ffffff;
+            --border-color: #374151; --grid-color: #333333; --accent-text: #f39c12;
+            --input-bg: #1a1a2e; --subtle-bg: rgba(255,255,255,0.05);
+            --bubble-control-bg: rgba(0,0,0,0.4); --icon-wrapper-bg: rgba(255,255,255,0.1);
+            --form-box-bg: rgba(255,255,255,0.05);
+        }
+        body.light-mode {
+            --bg-color: #ffffff; --card-bg: #f9fafb; --text-color: #111827;
+            --border-color: #d1d5db; --grid-color: #e5e7eb; --accent-text: #b45309;
+            --input-bg: #ffffff; --subtle-bg: rgba(0,0,0,0.03);
+            --bubble-control-bg: rgba(255,255,255,0.85); --icon-wrapper-bg: rgba(0,0,0,0.1);
+            --form-box-bg: #ffffff;
+        }
+        ::-webkit-scrollbar{width:10px;height:10px}
+        ::-webkit-scrollbar-track{background:var(--bg-color)}
+        ::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:5px;border:2px solid var(--bg-color)}
+        ::-webkit-scrollbar-thumb:hover{background:var(--accent-text)}
+        body{background-color:var(--bg-color);color:var(--text-color);font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;margin:0;overflow:hidden;user-select:none;transition:background-color .3s,color .3s}
+        .bg-dark-card{background-color:var(--card-bg)}
+        .btn-orange{background-color:#f39c12;transition:all .2s;color:#000}
+        .btn-orange:hover{background-color:#e67e22;transform:scale(1.02)}
+        .grid-bg{background-image:radial-gradient(circle,var(--grid-color) 1px,transparent 1px);background-size:40px 40px}
+        .outline-btn{border:1px solid var(--border-color);background:transparent;transition:all .2s;color:var(--text-color)}
+        .outline-btn:hover{background:var(--subtle-bg)}
+        .outline-btn.active{border-color:#f39c12;background:rgba(243,156,18,.1);color:var(--accent-text)}
+        .outline-btn.active-blue{border-color:#3b82f6;background:rgba(59,130,246,.1);color:#3b82f6}
+        .text-accent{color:var(--accent-text)}
+        select,input,textarea{background-color:var(--input-bg)!important;color:var(--text-color)!important;border:1px solid var(--border-color)!important}
+        option{background-color:var(--card-bg);color:var(--text-color)}
+        input[type="color"]{border:none;padding:0;background:none;width:44px;height:44px;-webkit-appearance:none}
+        input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+        input[type="color"]::-webkit-color-swatch{border:none;border-radius:6px}
+        .bubble{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:grab;transition:box-shadow .3s,border-color .2s;border:2px solid rgba(255,255,255,.2);text-align:center;z-index:10;pointer-events:all}
+        .bubble:active{cursor:grabbing}
+        .bubble.highlight{border-color:#f39c12;box-shadow:0 0 30px rgba(243,156,18,.5)}
+        body.light-mode .bubble.highlight{border-color:#b45309;box-shadow:0 0 65px rgba(180,83,9,.9)}
+        body.light-mode .bubble.light-color-outline{border-color:#374151!important;border-width:2px!important}
+        .bubble-content{z-index:5;pointer-events:none}
+        .bubble-label{white-space:pre-wrap;line-height:1.1;word-break:break-word;display:block}
+        .bubble-controls{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:4px;opacity:0;transition:opacity .2s;z-index:20;background:var(--bubble-control-bg);border-radius:50%}
+        .bubble:hover .bubble-controls{opacity:1}
+        .control-btn{background:var(--icon-wrapper-bg);border-radius:50%;padding:6px;transition:transform .2s,background .2s;pointer-events:all}
+        body.light-mode .bubble-controls .control-btn i.pencil-icon{color:#000!important}
+        body.light-mode .bubble-controls .control-btn i.text-blue-400{color:#1e40af!important}
+        body.light-mode .bubble-controls .control-btn i.text-green-400{color:#166534!important}
+        .control-btn:hover{transform:scale(1.2);background:rgba(255,255,255,.2)}
+        body.light-mode .control-btn:hover{background:rgba(0,0,0,.2)}
+        .resize-handle{position:absolute;bottom:15%;right:15%;width:14px;height:14px;background:rgba(255,255,255,.3);border-radius:2px;cursor:nwse-resize;opacity:0;transition:opacity .2s;z-index:25;pointer-events:all}
+        .bubble:hover .resize-handle{opacity:1}
+        .resize-handle:hover{background:#f39c12}
+        #minimap{position:absolute;bottom:20px;right:20px;width:180px;height:120px;background:var(--card-bg);opacity:.9;border:2px solid var(--border-color);border-radius:8px;overflow:hidden;z-index:50}
+        #minimap-viewport{position:absolute;border:1px solid #f39c12;background:rgba(243,156,18,.1);pointer-events:none}
+        #connection-layer{position:absolute;top:0;left:0;pointer-events:none;z-index:5}
+        .scissors-cursor{cursor:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>'),auto!important}
+        .lock-cursor{cursor:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="orange" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'),auto!important}
+        .modal-overlay{background:rgba(0,0,0,.85);backdrop-filter:blur(8px)}
+        .view-container{display:none;height:100%;width:100%;overflow-y:auto;background-color:var(--bg-color);padding:2rem}
+        .view-container.active{display:block}
+        .active-nav{background-color:#f39c12!important;color:#000!important}
+        tr{border-bottom:1px solid var(--border-color)}
+        th{text-align:left;color:var(--accent-text);text-transform:uppercase;font-size:.75rem;letter-spacing:.05em;padding:1rem}
+        td{padding:1rem}
+        .color-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .1s}
+        .color-dot:hover{transform:scale(1.2)}
+        .color-dot.selected{border-color:white}
+        .stat-card{background:var(--card-bg);border:1px solid var(--border-color);border-radius:1rem;padding:1.25rem;transition:background-color .3s}
+        @keyframes ai-pulse{0%,100%{opacity:.4}50%{opacity:1}}
+        .ai-dot{width:8px;height:8px;border-radius:50%;background:#f39c12;animation:ai-pulse 1.4s infinite;display:inline-block}
+        .ai-dot:nth-child(2){animation-delay:.2s}
+        .ai-dot:nth-child(3){animation-delay:.4s}
+        .tag-pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:.65rem;background:rgba(255,255,255,.08);border:1px solid var(--border-color);margin:1px}
+        body.light-mode .tag-pill{background:rgba(0,0,0,.06)}
+        .stat-filter-btn{padding:4px 12px;border-radius:6px;font-size:.7rem;font-weight:700;border:1px solid var(--border-color);background:transparent;color:var(--text-color);cursor:pointer;transition:all .15s}
+        .stat-filter-btn.active{background:#f39c12;color:#000;border-color:#f39c12}
+        .undo-pulse{animation:undo-flash .3s ease}
+        @keyframes undo-flash{0%{transform:scale(1.2)}100%{transform:scale(1)}}
+    </style>
+</head>
+<body onkeydown="app.handleGlobalKey(event)">
+
+<input type="file" id="json-input" accept=".json" class="hidden" onchange="app.handleImport(event)">
+
+<!-- LOGIN -->
+<div id="login-screen" class="flex flex-col items-center justify-start min-h-screen z-[100] relative overflow-y-auto p-8">
+    <div class="bg-dark-card p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-800 text-center relative my-auto">
+        <button onclick="app.toggleTheme()" class="absolute top-6 right-6 p-2 rounded-full outline-btn" id="btn-theme-toggle">
+            <i data-lucide="moon" class="w-5 h-5" id="theme-icon"></i>
+        </button>
+        <div class="flex items-center justify-center mb-8 gap-4">
+            <div class="w-10 h-10 bg-blue-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+            <h1 id="txt-app-title" class="text-3xl font-bold text-accent">Mis Intereses</h1>
+        </div>
+        <div class="space-y-6">
+            <div>
+                <label id="txt-select-user" class="block text-sm text-gray-500 mb-2 font-medium">Seleccionar Usuario:</label>
+                <select id="user-selector" class="w-full rounded-lg p-3 outline-none"></select>
+            </div>
+            <div>
+                <label id="txt-select-lang" class="block text-sm text-gray-500 mb-2 font-medium">Idioma / Language:</label>
+                <select id="language-selector" onchange="app.changeLanguage(this.value)" class="w-full rounded-lg p-3 outline-none">
+                    <option value="es">Español</option><option value="en">English</option>
+                </select>
+            </div>
+            <button id="txt-enter" onclick="app.showDashboard()" class="w-full btn-orange font-bold py-3 rounded-lg text-lg shadow-lg">Entrar</button>
+            <div class="space-y-3 pt-2">
+                <button id="txt-create-user" onclick="app.createNewUser()" class="w-full outline-btn py-3 rounded-lg font-bold">+ Crear Nuevo Usuario</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="app.exportUserData()" class="outline-btn py-3 rounded-lg text-xs flex items-center justify-center gap-1">
+                        <i data-lucide="hard-drive" class="w-4 h-4 text-pink-400"></i><span id="txt-usb">USB</span>
+                    </button>
+                    <button onclick="app.triggerImport()" class="outline-btn py-3 rounded-lg text-xs flex items-center justify-center gap-1">
+                        <i data-lucide="folder" class="w-4 h-4 text-orange-400"></i><span id="txt-load">Cargar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen" class="hidden flex flex-col h-screen overflow-hidden">
+    <header class="bg-dark-card border-b border-gray-800 p-3 flex items-center justify-between z-[60] shadow-md">
+        <div class="flex items-center gap-4">
+            <button id="btn-main-menu" onclick="app.checkUnsavedAndExit()" class="flex items-center gap-2 outline-btn px-3 py-2 rounded-lg text-sm">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i><span id="txt-menu">Menú</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <span id="display-user-name" class="text-accent font-semibold text-lg">Usuario Principal</span>
+                <div class="flex gap-1">
+                    <button onclick="app.openNameEditModal()" class="bg-gray-500/10 p-1.5 rounded-full border border-gray-700 hover:bg-gray-500/20">
+                        <i data-lucide="pencil" class="w-3 h-3 text-gray-400"></i>
+                    </button>
+                    <button onclick="app.confirmDeleteProfile()" class="bg-red-900/10 p-1.5 rounded-full border border-red-900/30 hover:bg-red-900/40">
+                        <i data-lucide="trash-2" class="w-3 h-3 text-red-500"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex bg-gray-500/10 rounded-lg p-1 border border-gray-700">
+            <button id="nav-map"    onclick="app.switchView('map')"    class="px-4 py-1.5 rounded-md active-nav font-medium text-sm">Mapa</button>
+            <button id="nav-list"   onclick="app.switchView('list')"   class="px-4 py-1.5 rounded-md text-gray-400 font-medium text-sm hover:text-white">Lista</button>
+            <button id="nav-months" onclick="app.switchView('months')" class="px-4 py-1.5 rounded-md text-gray-400 font-medium text-sm hover:text-white">Meses</button>
+            <button id="nav-stats"  onclick="app.switchView('stats')"  class="px-4 py-1.5 rounded-md text-gray-400 font-medium text-sm hover:text-white">Estadísticas</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-undo" onclick="app.undo()" title="Deshacer (Ctrl+Z)"
+                class="outline-btn px-3 py-2 rounded-lg text-sm flex items-center gap-1 opacity-50 cursor-not-allowed" disabled>
+                <i data-lucide="undo-2" class="w-4 h-4"></i>
+                <span id="undo-counter" class="text-xs bg-gray-500/20 px-1.5 rounded-full">0</span>
+            </button>
+            <button id="txt-save" onclick="app.saveChanges()" class="outline-btn px-3 py-2 rounded-lg text-sm font-bold">Guardar</button>
+            <button id="txt-new-bubble" onclick="app.openModal()" class="btn-orange font-bold px-5 py-2 rounded-lg text-sm shadow-md">+ Nueva Burbuja</button>
+        </div>
+    </header>
+
+    <main id="main-content" class="flex-grow relative overflow-hidden">
+        <!-- MAP -->
+        <div id="viewport" class="w-full h-full grid-bg relative">
+            <svg id="connection-layer" width="100%" height="100%"></svg>
+            <div id="bubble-container"></div>
+            <!-- Right toolbar -->
+            <div class="absolute right-6 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-[70]">
+                <button id="btn-plus"  onclick="app.zoomIn()"  class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-500/20 shadow-sm" title="Zoom +"><i data-lucide="plus" class="w-5 h-5 text-gray-400"></i></button>
+                <button id="btn-minus" onclick="app.zoomOut()" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-500/20 shadow-sm" title="Zoom -"><i data-lucide="minus" class="w-5 h-5 text-gray-400"></i></button>
+                <button id="btn-reset" onclick="app.centerOnDensity()" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-500/20 shadow-sm" title="Centrar en zona más densa"><i data-lucide="crosshair" class="w-5 h-5 text-gray-400"></i></button>
+                <div class="h-2 border-t border-gray-700"></div>
+                <button id="pointer-tool" onclick="app.setTool('pointer')" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center shadow-lg active-blue" title="Puntero">
+                    <i data-lucide="mouse-pointer-2" class="w-5 h-5"></i>
+                </button>
+                <button id="scissors-tool" onclick="app.setTool('scissors')" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center shadow-lg" title="Cortar conexiones">
+                    <i data-lucide="scissors" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                <button id="lock-tool" onclick="app.setTool('lock')" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center shadow-lg" title="Fijar/liberar longitud de cable">
+                    <i data-lucide="lock" class="w-5 h-5 text-gray-400"></i>
+                </button>
+                <div class="h-2 border-t border-gray-700"></div>
+                <button id="btn-theme-map" onclick="app.toggleTheme()" class="w-10 h-10 bg-dark-card border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-500/20 shadow-sm" title="Cambiar tema">
+                    <i data-lucide="moon" class="w-5 h-5 text-gray-400" id="theme-icon-map"></i>
+                </button>
+            </div>
+            <div id="minimap">
+                <canvas id="minimap-canvas"></canvas>
+                <div id="minimap-viewport"></div>
+            </div>
+        </div>
+
+        <!-- LIST -->
+        <div id="view-list" class="view-container">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 id="txt-list-title" class="text-2xl font-bold text-accent">Todos los Intereses</h2>
+                    <div class="flex gap-2">
+                        <button onclick="app.sortList('name')"     class="outline-btn px-3 py-2 rounded-lg text-xs flex items-center gap-1"><i data-lucide="sort-asc" class="w-3 h-3"></i><span id="txt-sort-name">Nombre</span></button>
+                        <button onclick="app.sortList('votes')"    class="outline-btn px-3 py-2 rounded-lg text-xs flex items-center gap-1"><i data-lucide="star" class="w-3 h-3"></i><span id="txt-sort-votes">Votos</span></button>
+                        <button onclick="app.sortList('category')" class="outline-btn px-3 py-2 rounded-lg text-xs flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i><span id="txt-sort-category">Categoría</span></button>
+                        <button onclick="app.sortList('date')"     class="outline-btn px-3 py-2 rounded-lg text-xs flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i><span id="txt-sort-date">Fecha</span></button>
+                    </div>
+                </div>
+                <div class="bg-dark-card rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+                    <table class="w-full text-sm">
+                        <thead><tr>
+                            <th id="th-name">Interés</th><th id="th-cat">Categoría</th>
+                            <th id="th-tags">Etiquetas</th><th id="th-votes">Votos</th>
+                            <th id="th-date">Creado</th><th class="text-right" id="th-actions">Acciones</th>
+                        </tr></thead>
+                        <tbody id="list-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- MONTHS -->
+        <div id="view-months" class="view-container">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 id="txt-months-title" class="text-2xl font-bold text-accent">Cronología de Actividad</h2>
+                    <div class="flex items-center gap-3">
+                        <label id="lbl-view-month" class="text-xs text-gray-500 uppercase font-bold">Ver mes:</label>
+                        <select id="month-selector" onchange="app.handleMonthChange(this.value)" class="rounded-lg px-3 py-1 text-sm outline-none"></select>
+                    </div>
+                </div>
+                <div id="months-grid" class="space-y-6"></div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div id="view-stats" class="view-container">
+            <div class="max-w-5xl mx-auto">
+                <!-- Header + period filter -->
+                <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                    <h2 id="txt-stats-title" class="text-2xl font-bold text-accent">Estadísticas</h2>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <!-- Period picker -->
+                        <div class="flex gap-1 bg-gray-500/10 p-1 rounded-lg border border-gray-700">
+                            <button class="stat-filter-btn active" id="sfb-global" onclick="app.setStatsPeriod('global')">Global</button>
+                            <button class="stat-filter-btn" id="sfb-year"   onclick="app.openYearPicker()">Año</button>
+                            <button class="stat-filter-btn" id="sfb-month"  onclick="app.openMonthPicker()">Mes</button>
+                        </div>
+                        <span id="stats-period-label" class="text-xs text-accent font-bold"></span>
+                        <button id="btn-analyze" onclick="app.analyzeWithAI()" class="btn-orange font-bold px-4 py-2 rounded-lg text-xs shadow-md flex items-center gap-1">
+                            <i data-lucide="brain" class="w-3 h-3"></i><span id="txt-analyze-btn">Analizar con IA</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="stats-cards"></div>
+
+                <!-- Charts row -->
+                <div class="grid md:grid-cols-2 gap-5 mb-5">
+                    <div class="stat-card">
+                        <h3 id="txt-stats-by-cat" class="text-xs font-bold text-accent uppercase tracking-wider mb-3">Por Categoría</h3>
+                        <div id="chart-categories" class="space-y-2"></div>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="txt-stats-monthly" class="text-xs font-bold text-accent uppercase tracking-wider mb-3">Actividad Mensual</h3>
+                        <div id="chart-monthly"></div>
+                    </div>
+                </div>
+
+                <!-- Top + Bubble detail -->
+                <div class="grid md:grid-cols-2 gap-5 mb-5">
+                    <div class="stat-card">
+                        <h3 id="txt-stats-top" class="text-xs font-bold text-accent uppercase tracking-wider mb-3">Top Intereses</h3>
+                        <div id="stats-top-list" class="space-y-2"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 id="txt-stats-bubble-detail" class="text-xs font-bold text-accent uppercase tracking-wider">Detalle por Burbuja</h3>
+                            <select id="bubble-detail-select" onchange="app.renderBubbleDetail()" class="text-xs rounded px-2 py-1 max-w-[160px]"></select>
+                        </div>
+                        <div id="bubble-detail-content"></div>
+                    </div>
+                </div>
+
+                <!-- Category deep-dive -->
+                <div class="stat-card mb-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 id="txt-stats-cat-detail" class="text-xs font-bold text-accent uppercase tracking-wider">Detalle por Categoría</h3>
+                        <select id="cat-detail-select" onchange="app.renderCatDetail()" class="text-xs rounded px-2 py-1"></select>
+                    </div>
+                    <div id="cat-detail-content"></div>
+                </div>
+
+                <!-- AI -->
+                <div class="stat-card">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="brain" class="w-4 h-4 text-accent"></i>
+                        <h3 id="txt-ai-title" class="text-xs font-bold text-accent uppercase tracking-wider">Análisis de IA</h3>
+                    </div>
+                    <div id="ai-result" class="text-sm text-gray-400 leading-relaxed">
+                        <p id="txt-ai-placeholder" class="text-gray-500 italic text-xs">Pulsa "Analizar con IA" para obtener un análisis personalizado de tus intereses.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- MODALES -->
+<div id="replace-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[300] p-4">
+    <div class="bg-dark-card w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-800 text-center">
+            <h2 id="txt-replace-title" class="text-xl font-bold text-accent">Límite alcanzado</h2>
+            <p id="txt-replace-desc" class="text-sm text-gray-500 mt-2 font-medium">Selecciona cuál reemplazar:</p>
+        </div>
+        <div id="replace-options" class="p-6 space-y-3"></div>
+        <div class="p-6 bg-gray-500/5 flex gap-3">
+            <button onclick="app.closeReplaceModal()" class="flex-grow outline-btn py-3 rounded-lg text-gray-500" id="txt-cancel-replace">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="replace-confirm-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[310] p-4">
+    <div class="bg-dark-card w-full max-w-md rounded-2xl border border-red-900/50 overflow-hidden shadow-2xl">
+        <div class="p-8 text-center">
+            <div class="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i></div>
+            <h2 id="txt-replace-confirm-title" class="text-2xl font-bold text-white mb-4">¿Confirmar reemplazo?</h2>
+            <p class="text-gray-400 text-sm">Los datos de <span id="replace-target-name" class="text-accent font-bold"></span> se perderán para siempre.</p>
+        </div>
+        <div class="p-6 bg-gray-500/5 flex flex-col gap-3">
+            <button onclick="app.executeReplacement(true)"  class="w-full btn-orange font-bold py-3 rounded-lg flex items-center justify-center gap-2"><i data-lucide="download" class="w-4 h-4"></i><span id="txt-download-replace">Descargar copia y Reemplazar</span></button>
+            <button onclick="app.executeReplacement(false)" class="w-full bg-red-600/20 text-red-500 border border-red-900/50 font-bold py-3 rounded-lg hover:bg-red-600/30"><span id="txt-just-replace">Reemplazar sin descargar</span></button>
+            <button onclick="app.closeReplaceConfirmModal()" class="w-full outline-btn py-3 rounded-lg text-gray-500">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="import-rename-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[350] p-4">
+    <div class="bg-dark-card w-full max-w-sm rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-800 text-center">
+            <h2 id="txt-dup-name-title" class="text-xl font-bold text-accent">Nombre duplicado</h2>
+            <p id="txt-dup-name-desc" class="text-sm text-gray-400 mt-1">Este nombre ya existe. Elige uno nuevo:</p>
+        </div>
+        <div class="p-6"><input type="text" id="import-new-name" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none"></div>
+        <div class="p-6 bg-gray-500/5 flex gap-3">
+            <button onclick="app.completeImportWithNewName()" class="flex-grow btn-orange font-bold py-2 rounded-lg" id="txt-load-btn">Cargar</button>
+            <button onclick="app.closeImportRenameModal()" class="px-6 outline-btn py-2 rounded-lg text-gray-500" id="txt-cancel-rename">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="delete-profile-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[400] p-4">
+    <div class="bg-dark-card w-full max-w-sm rounded-2xl border border-red-900/50 overflow-hidden shadow-2xl">
+        <div class="p-6 text-center">
+            <div class="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="trash-2" class="w-8 h-8 text-red-500"></i></div>
+            <h2 id="txt-del-prof-title" class="text-xl font-bold mb-2">¿Eliminar este perfil?</h2>
+            <p id="txt-del-prof-desc" class="text-gray-500 text-sm">Esta acción es permanente.</p>
+        </div>
+        <div class="p-6 bg-gray-500/5 flex flex-col gap-3">
+            <button onclick="app.deleteCurrentProfile()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700" id="txt-del-prof-confirm">Eliminar definitivamente</button>
+            <button onclick="app.closeDeleteProfileModal()" class="w-full outline-btn py-3 rounded-lg text-gray-500">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="bubble-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[200] p-4">
+    <div class="bg-dark-card w-full max-w-md rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+            <h2 id="modal-title" class="text-xl font-bold text-accent">Burbuja</h2>
+            <button onclick="app.closeModal()" class="text-gray-400 hover:text-red-500"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="edit-id">
+            <div><label id="lbl-name" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Nombre</label>
+                <input type="text" id="interest-name" maxlength="25" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none" onkeydown="app.handleModalEnter(event)"></div>
+            <div><label id="lbl-cat" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Categoría principal</label>
+                <input list="category-list" type="text" id="interest-category" maxlength="20" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none" onkeydown="app.handleModalEnter(event)">
+                <datalist id="category-list"></datalist></div>
+            <div><label id="lbl-tags" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Etiquetas adicionales <span class="normal-case text-gray-600">(coma)</span></label>
+                <input type="text" id="interest-tags" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none" onkeydown="app.handleModalEnter(event)"></div>
+            <div><label id="lbl-color" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Color</label>
+                <div class="space-y-2 p-3 rounded-lg border border-gray-700" style="background-color:var(--form-box-bg)">
+                    <div id="preset-colors" class="flex flex-wrap gap-2 mb-2"></div>
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="interest-color" value="#3498db" class="cursor-pointer">
+                        <button id="btn-fav-color" onclick="app.saveFavoriteColor()" class="flex-grow text-[10px] outline-btn py-2 rounded uppercase tracking-tighter hover:text-white">Favorito</button>
+                    </div>
+                </div></div>
+            <div><label id="lbl-desc" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Descripción</label>
+                <textarea id="interest-desc" rows="2" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none resize-none"></textarea></div>
+            <div><label id="lbl-size" class="block text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Tamaño Manual</label>
+                <input type="range" id="interest-size" min="0" max="100" value="0" class="w-full mt-3"></div>
+        </div>
+        <div class="p-6 bg-gray-500/5 flex gap-3">
+            <button id="btn-save-bubble" onclick="app.saveBubble()" class="flex-grow btn-orange font-bold py-3 rounded-lg shadow-lg">Guardar</button>
+            <button id="delete-btn" onclick="app.deleteBubble()" class="hidden px-4 bg-red-900/20 text-red-500 border border-red-900/50 rounded-lg hover:bg-red-900/40"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+        </div>
+    </div>
+</div>
+
+<div id="user-name-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[250] p-4">
+    <div class="bg-dark-card w-full max-w-sm rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-800 text-center"><h2 id="txt-edit-user-title" class="text-xl font-bold text-accent">Cambiar nombre</h2></div>
+        <div class="p-6"><input type="text" id="new-user-name" class="w-full bg-transparent border border-gray-700 rounded-lg p-3 outline-none"></div>
+        <div class="p-6 bg-gray-500/5 flex gap-3">
+            <button id="txt-save-user" onclick="app.saveUserName()" class="flex-grow btn-orange font-bold py-2 rounded-lg">Guardar</button>
+            <button onclick="app.closeNameEditModal()" class="px-6 outline-btn py-2 rounded-lg text-gray-500" id="txt-cancel-user">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="unsaved-modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center z-[300] p-4">
+    <div class="bg-dark-card w-full max-w-sm rounded-2xl border border-red-900/50 overflow-hidden shadow-2xl">
+        <div class="p-6 text-center">
+            <div class="w-16 h-16 bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i></div>
+            <h2 id="txt-unsaved-title" class="text-xl font-bold text-white mb-2">Cambios sin guardar</h2>
+            <p id="txt-unsaved-desc" class="text-gray-500 text-sm">Hay cambios sin guardar.</p>
+        </div>
+        <div class="p-6 bg-gray-500/5 flex flex-col gap-3">
+            <button id="txt-exit-no-save" onclick="app.showLogin()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700">Salir sin guardar</button>
+            <button id="txt-continue-edit" onclick="app.closeUnsavedModal()" class="w-full outline-btn py-3 rounded-lg text-gray-500">Seguir editando</button>
+        </div>
+    </div>
+</div>
+
+<!-- year / month picker popups (lightweight inline) -->
+<div id="period-picker" class="hidden fixed inset-0 z-[500] flex items-center justify-center p-4" onclick="this.classList.add('hidden')">
+    <div class="bg-dark-card rounded-2xl border border-gray-700 p-6 shadow-2xl min-w-[220px]" onclick="event.stopPropagation()">
+        <h3 id="period-picker-title" class="text-sm font-bold text-accent mb-4 uppercase tracking-wider">Elegir período</h3>
+        <div id="period-picker-options" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        <button onclick="document.getElementById('period-picker').classList.add('hidden')" class="mt-4 w-full outline-btn py-2 rounded-lg text-xs text-gray-500">Cancelar</button>
+    </div>
+</div>
+
+<script>
+const app = {
+    // State
+    users:[], currentUserIndex:0, bubbles:[], links:[], categories:[], favoriteColors:[],
+    currentView:'map', lang:'es', theme:'dark',
+    zoom:1, panX:0, panY:0,
+    isDragging:false, dragTarget:null, isResizing:false, resizeTarget:null,
+    dragOffset:{x:0,y:0}, currentTool:'pointer',
+    linkCandidate:null, linkHoverTarget:null, hoveredLinkIdx:null,
+    mousePos:{x:0,y:0}, hasUnsavedChanges:false,
+    pendingImportData:null, pendingReplaceIndex:null,
+    selectedMonthKey:null,
+    // Undo
+    undoStack:[], MAX_UNDO:3,
+    // Stats period
+    statsPeriod:'global', statsYear:null, statsMonth:null,
+
+    // ── UNDO ──────────────────────────────────────────────────────────────────
+    pushUndo() {
+        this.undoStack.push({
+            bubbles: JSON.parse(JSON.stringify(this.bubbles)),
+            links:   JSON.parse(JSON.stringify(this.links))
+        });
+        if (this.undoStack.length > this.MAX_UNDO) this.undoStack.shift();
+        this.updateUndoBtn();
+    },
+    undo() {
+        if (!this.undoStack.length) return;
+        const snap = this.undoStack.pop();
+        this.bubbles = snap.bubbles; this.links = snap.links;
+        this.hasUnsavedChanges = true;
+        this.renderBubbles();
+        this.updateUndoBtn();
+        const btn = document.getElementById('btn-undo');
+        if (btn) { btn.classList.add('undo-pulse'); setTimeout(()=>btn.classList.remove('undo-pulse'),300); }
+    },
+    updateUndoBtn() {
+        const btn = document.getElementById('btn-undo');
+        const counter = document.getElementById('undo-counter');
+        if (!btn) return;
+        const n = this.undoStack.length;
+        if (counter) counter.textContent = n;
+        btn.disabled = n === 0;
+        btn.classList.toggle('opacity-50', n === 0);
+        btn.classList.toggle('cursor-not-allowed', n === 0);
+    },
+
+    // ── COLOUR HELPERS ────────────────────────────────────────────────────────
+    getLuminance(hex) {
+        let h = hex.replace('#','');
+        if (h.length===3) h=h.split('').map(c=>c+c).join('');
+        if (h.length<6) return 0.5;
+        const r=parseInt(h.substr(0,2),16)/255, g=parseInt(h.substr(2,2),16)/255, b=parseInt(h.substr(4,2),16)/255;
+        return r*0.299 + g*0.587 + b*0.114;
+    },
+    isLightColor(hex) { return this.getLuminance(hex) > 0.78; },
+    isDarkColor(hex)  { return this.getLuminance(hex) < 0.12; },
+
+    /** Returns visible cable color given theme + bubble color */
+    getCableColor(bubble) {
+        const c = bubble.color;
+        if (this.theme === 'light' && this.isLightColor(c)) return '#6b7280';  // white → gray in light mode
+        if (this.theme === 'dark'  && this.isDarkColor(c))  return '#9ca3af';  // black → gray in dark mode
+        return c;
+    },
+
+    // ── INIT ─────────────────────────────────────────────────────────────────
+    async init() {
+        await this.loadUsers();
+        this.renderUserSelector(); this.animate();
+        this.setupEventListeners(); this.applyLanguage(); lucide.createIcons();
+        // Show app version in title bar when inside Electron
+        if (window.electron) {
+            const ver = await window.electron.getVersion().catch(()=>'');
+            if (ver) document.title = `Mis Intereses v${ver}`;
+        }
+    },
+
+    // ── THEME ─────────────────────────────────────────────────────────────────
+    toggleTheme() {
+        this.theme = this.theme==='dark' ? 'light' : 'dark';
+        document.body.classList.toggle('light-mode', this.theme==='light');
+        const icon = this.theme==='dark' ? 'moon' : 'sun';
+        ['theme-icon','theme-icon-map'].forEach(id=>{ const el=document.getElementById(id); if(el) el.setAttribute('data-lucide',icon); });
+        lucide.createIcons();
+        if (this.currentView==='list')   this.renderList();
+        if (this.currentView==='months') this.renderMonths();
+        if (this.currentView==='stats')  this.renderStats();
+        this.renderBubbles();
+    },
+
+    // ── KEYBOARD ──────────────────────────────────────────────────────────────
+    handleGlobalKey(e) {
+        if (e.key==='Escape') {
+            this.closeModal(); this.closeReplaceConfirmModal();
+            if (this.currentTool!=='pointer') this.setTool('pointer');
+            document.getElementById('period-picker').classList.add('hidden');
+        }
+        if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); this.undo(); return; }
+        if (e.key==='Enter' && !document.getElementById('bubble-modal').classList.contains('hidden')) {
+            if (document.activeElement.tagName!=='TEXTAREA') { e.preventDefault(); this.saveBubble(); }
+        }
+    },
+    handleModalEnter(e) { if (e.key==='Enter') { e.preventDefault(); this.saveBubble(); } },
+
+    // ── USERS ─────────────────────────────────────────────────────────────────
+    async loadUsers() {
+        let raw = null;
+        // 1. Try electron disk storage first
+        if (window.electron) {
+            raw = await window.electron.loadData();
+        }
+        // 2. Fall back to localStorage
+        if (!raw) raw = localStorage.getItem('tracker_users_v6');
+
+        if (raw) {
+            try {
+                const p = JSON.parse(raw);
+                this.users = p.filter(u => u && u.name);
+            } catch(e) {
+                this.users = [];
+            }
+        }
+        if (!this.users || !this.users.length) {
+            this.users = [{id:Date.now(),name:"Usuario Principal",data:{bubbles:[],links:[],categories:["Deportes","Tecnología","Arte","Ciencia","Salud"],favoriteColors:[]}}];
+            this.saveUsersToStorage();
+        }
+        const li = localStorage.getItem('tracker_last_user_idx');
+        this.currentUserIndex = (li !== null && this.users[li]) ? parseInt(li) : 0;
+    },
+    saveUsersToStorage() {
+        this.users = this.users.filter(u => u && u.name);
+        const json = JSON.stringify(this.users);
+        localStorage.setItem('tracker_users_v6', json);
+        // Auto-backup to disk when running inside Electron
+        if (window.electron) window.electron.saveData(json).catch(console.error);
+    },
+    renderUserSelector() {
+        const s=document.getElementById('user-selector'); if(!s) return; s.innerHTML='';
+        const active=this.users.filter(u=>u&&u.name);
+        active.forEach((u,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=u.name; s.appendChild(o); });
+        if (this.currentUserIndex>=active.length) this.currentUserIndex=0;
+        s.value=this.currentUserIndex;
+        const cb=document.getElementById('txt-create-user'); if(cb) cb.classList.toggle('opacity-50',active.length>=3);
+    },
+    createNewUser() {
+        const active=this.users.filter(u=>u&&u.name); if(active.length>=3) return;
+        let n="Nuevo Usuario",c=1; while(this.users.some(u=>u&&u.name===n)) n=`Nuevo Usuario ${c++}`;
+        this.users.push({id:Date.now(),name:n,data:{bubbles:[],links:[],categories:["Deportes","Tecnología","Arte","Ciencia","Salud"],favoriteColors:[]}});
+        this.saveUsersToStorage(); this.renderUserSelector(); this.currentUserIndex=this.users.length-1;
+        document.getElementById('user-selector').value=this.currentUserIndex; lucide.createIcons();
+    },
+    confirmDeleteProfile() { document.getElementById('delete-profile-modal').classList.remove('hidden'); lucide.createIcons(); },
+    closeDeleteProfileModal() { document.getElementById('delete-profile-modal').classList.add('hidden'); },
+    deleteCurrentProfile() {
+        this.users.splice(this.currentUserIndex,1);
+        if (!this.users.length) this.users.push({id:Date.now(),name:"Usuario Principal",data:{bubbles:[],links:[],categories:["Deportes","Tecnología","Arte","Ciencia","Salud"],favoriteColors:[]}});
+        this.saveUsersToStorage(); this.closeDeleteProfileModal(); this.showLogin();
+    },
+
+    // ── EXPORT / IMPORT ───────────────────────────────────────────────────────
+    async exportUserData(idx=null) {
+        const i=idx!==null?idx:parseInt(document.getElementById('user-selector').value);
+        const u=this.users[i]; if(!u) return;
+        const jsonStr=JSON.stringify(u,null,2), fileName=`${u.name.replace(/\s+/g,'_')}_backup.json`;
+        // Electron: native Save dialog
+        if (window.electron) {
+            const result = await window.electron.exportFile(jsonStr, fileName);
+            if (!result || !result.ok) return; // user cancelled or error
+            return;
+        }
+        // Browser: File System Access API, then fallback
+        if (window.showSaveFilePicker) {
+            try {
+                const handle=await window.showSaveFilePicker({suggestedName:fileName,types:[{description:'JSON',accept:{'application/json':['.json']}}]});
+                const w=await handle.createWritable(); await w.write(jsonStr); await w.close(); return;
+            } catch(err) { if(err.name==='AbortError') return; }
+        }
+        const b=new Blob([jsonStr],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fileName; a.click();
+    },
+    async triggerImport() {
+        // Electron: use native Open dialog
+        if (window.electron) {
+            const raw = await window.electron.importFile();
+            if (!raw) return;
+            try {
+                const d = JSON.parse(raw); if (!d.name || !d.data) throw new Error();
+                this.pendingImportData = d;
+                const exist = this.users.some(u => u && u.name.trim().toLowerCase() === d.name.trim().toLowerCase());
+                if (exist) this.openImportRenameModal(d.name);
+                else if (this.users.filter(u => u && u.name).length < 3) { this.users.push(d); this.saveUsersToStorage(); this.renderUserSelector(); this.currentUserIndex = this.users.length - 1; }
+                else this.openReplaceModal();
+            } catch(err) {}
+            return;
+        }
+        // Browser fallback
+        document.getElementById('json-input').click();
+    },
+    handleImport(e) {
+        const f=e.target.files[0]; if(!f) return;
+        const r=new FileReader(); r.onload=(ev)=>{
+            try {
+                const d=JSON.parse(ev.target.result); if(!d.name||!d.data) throw new Error();
+                this.pendingImportData=d;
+                const exist=this.users.some(u=>u&&u.name.trim().toLowerCase()===d.name.trim().toLowerCase());
+                if (exist) this.openImportRenameModal(d.name);
+                else if (this.users.filter(u=>u&&u.name).length<3) { this.users.push(d); this.saveUsersToStorage(); this.renderUserSelector(); this.currentUserIndex=this.users.length-1; }
+                else this.openReplaceModal();
+            } catch(err) {}
+            e.target.value='';
+        }; r.readAsText(f);
+    },
+    openImportRenameModal(n) { document.getElementById('import-new-name').value=n+" (Copy)"; document.getElementById('import-rename-modal').classList.remove('hidden'); },
+    closeImportRenameModal() { document.getElementById('import-rename-modal').classList.add('hidden'); },
+    completeImportWithNewName() {
+        const n=document.getElementById('import-new-name').value.trim();
+        if (!n||this.users.some(u=>u&&u.name.toLowerCase()===n.toLowerCase())) { alert('Nombre ya en uso'); return; }
+        this.pendingImportData.name=n;
+        if (this.users.filter(u=>u&&u.name).length<3) { this.users.push(this.pendingImportData); this.saveUsersToStorage(); this.renderUserSelector(); this.currentUserIndex=this.users.length-1; this.closeImportRenameModal(); }
+        else { this.closeImportRenameModal(); this.openReplaceModal(); }
+    },
+    openReplaceModal() {
+        const o=document.getElementById('replace-options'); o.innerHTML='';
+        this.users.filter(u=>u&&u.name).forEach((u,i)=>{
+            const b=document.createElement('button');
+            b.className="w-full text-left bg-transparent border border-gray-700 p-4 rounded-xl hover:border-[#f39c12] transition flex justify-between items-center";
+            b.innerHTML=`<div><div class="font-bold">${u.name}</div><div class="text-xs text-gray-500">${u.data.bubbles.length} intereses</div></div><div class="text-[#f39c12] text-xs font-bold uppercase">Seleccionar</div>`;
+            b.onclick=()=>this.openReplaceConfirmModal(i); o.appendChild(b);
+        });
+        document.getElementById('replace-modal').classList.remove('hidden'); lucide.createIcons();
+    },
+    closeReplaceModal() { document.getElementById('replace-modal').classList.add('hidden'); this.pendingImportData=null; },
+    openReplaceConfirmModal(idx) {
+        this.pendingReplaceIndex=idx;
+        document.getElementById('replace-target-name').textContent=this.users[idx].name;
+        document.getElementById('replace-confirm-modal').classList.remove('hidden'); lucide.createIcons();
+    },
+    closeReplaceConfirmModal() { document.getElementById('replace-confirm-modal').classList.add('hidden'); this.pendingReplaceIndex=null; },
+    executeReplacement(withDownload) {
+        if (this.pendingReplaceIndex===null) return;
+        if (withDownload) this.exportUserData(this.pendingReplaceIndex);
+        this.users[this.pendingReplaceIndex]=this.pendingImportData;
+        this.saveUsersToStorage(); this.renderUserSelector(); this.currentUserIndex=this.pendingReplaceIndex;
+        this.closeReplaceConfirmModal(); this.closeReplaceModal();
+    },
+
+    // ── LANGUAGE ──────────────────────────────────────────────────────────────
+    applyLanguage() {
+        const t=this.translations[this.lang]; if(!t) return;
+        const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+        set('txt-app-title',t.appTitle); set('txt-select-user',t.selectUser); set('txt-select-lang',t.selectLang);
+        set('txt-enter',t.enter); set('txt-create-user',t.createUser); set('txt-usb',t.usb); set('txt-load',t.load);
+        set('txt-menu',t.menu); set('nav-map',t.map); set('nav-list',t.list); set('nav-months',t.months); set('nav-stats',t.stats);
+        set('txt-save',t.save); set('txt-new-bubble',t.newBubble); set('txt-list-title',t.listTitle);
+        set('txt-sort-name',t.sortName); set('txt-sort-votes',t.sortVotes); set('txt-sort-category',t.sortCat); set('txt-sort-date',t.sortDate);
+        set('th-name',t.thName); set('th-cat',t.thCat); set('th-tags',t.thTags); set('th-votes',t.thVotes); set('th-date',t.thDate); set('th-actions',t.thActions);
+        set('lbl-name',t.lblNombre); set('lbl-cat',t.lblCat); set('lbl-tags',t.lblTags); set('lbl-color',t.lblColor); set('btn-fav-color',t.lblFav); set('lbl-desc',t.lblDesc); set('lbl-size',t.lblSize);
+        set('btn-save-bubble',t.btnSave); set('txt-edit-user-title',t.editUserTitle); set('txt-save-user',t.btnSave); set('txt-cancel-user',t.btnCancel);
+        set('txt-unsaved-title',t.unsavedTitle); set('txt-unsaved-desc',t.unsavedDesc); set('txt-exit-no-save',t.btnExit); set('txt-continue-edit',t.btnContinue);
+        set('txt-months-title',t.monthTitle); set('lbl-view-month',t.lblViewMonth);
+        set('txt-replace-title',t.replaceTitle); set('txt-replace-desc',t.replaceDesc); set('txt-cancel-replace',t.btnCancel);
+        set('txt-dup-name-title',t.dupNameTitle); set('txt-dup-name-desc',t.dupNameDesc); set('txt-load-btn',t.load); set('txt-cancel-rename',t.btnCancel);
+        set('txt-del-prof-title',t.delProfTitle); set('txt-del-prof-desc',t.delProfDesc); set('txt-del-prof-confirm',t.delProfBtn);
+        set('txt-replace-confirm-title',t.replaceConfirmTitle); set('txt-download-replace',t.btnDownloadReplace); set('txt-just-replace',t.btnJustReplace);
+        set('txt-stats-title',t.statsTitle); set('txt-stats-by-cat',t.statsByCat); set('txt-stats-monthly',t.statsMonthly);
+        set('txt-stats-top',t.statsTop); set('txt-stats-bubble-detail',t.statsBubbleDetail); set('txt-stats-cat-detail',t.statsCatDetail);
+        set('txt-analyze-btn',t.analyzeBtn); set('txt-ai-title',t.aiTitle); set('txt-ai-placeholder',t.aiPlaceholder);
+        document.getElementById('pointer-tool').title=t.tipPointer;
+        document.getElementById('scissors-tool').title=t.tipScissors;
+        document.getElementById('lock-tool').title=t.tipLock;
+        document.getElementById('btn-plus').title=t.tipPlus;
+        document.getElementById('btn-minus').title=t.tipMinus;
+        document.getElementById('btn-reset').title=t.tipReset;
+    },
+    changeLanguage(v) {
+        this.lang=v; this.applyLanguage();
+        if (this.currentView==='list')   this.renderList();
+        if (this.currentView==='months') this.renderMonths();
+        if (this.currentView==='stats')  this.renderStats();
+        this.renderBubbles();
+    },
+
+    // ── VIEWS ─────────────────────────────────────────────────────────────────
+    switchView(v) {
+        this.currentView=v;
+        const vp=document.getElementById('viewport'); if(vp) vp.style.display=v==='map'?'block':'none';
+        ['list','months','stats'].forEach(id=>document.getElementById(`view-${id}`).classList.toggle('active',v===id));
+        ['map','list','months','stats'].forEach(id=>document.getElementById(`nav-${id}`).classList.toggle('active-nav',v===id));
+        if (v==='list')   this.renderList();
+        if (v==='months') this.renderMonths();
+        if (v==='stats')  this.renderStats();
+        lucide.createIcons();
+    },
+
+    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    showDashboard() {
+        const s=document.getElementById('user-selector'); if(!s||s.value==="") return;
+        this.currentUserIndex=parseInt(s.value); localStorage.setItem('tracker_last_user_idx',this.currentUserIndex);
+        const u=this.users[this.currentUserIndex]; if(!u){ this.showLogin(); return; }
+        this.bubbles=JSON.parse(JSON.stringify(u.data.bubbles||[]));
+        this.links=JSON.parse(JSON.stringify(u.data.links||[]));
+        this.categories=JSON.parse(JSON.stringify(u.data.categories||["Deportes","Tecnología","Arte","Ciencia","Salud"]));
+        this.favoriteColors=JSON.parse(JSON.stringify(u.data.favoriteColors||[]));
+        this.hasUnsavedChanges=false; this.undoStack=[]; this.updateUndoBtn();
+        document.getElementById('display-user-name').textContent=u.name;
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('dashboard-screen').classList.remove('hidden');
+        this.migrateLegacyVotes(); this.updateCategoryList(); this.switchView('map'); this.centerOnDensity(); this.renderBubbles(); this.applyLanguage();
+    },
+    showLogin() {
+        this.closeUnsavedModal(); this.closeDeleteProfileModal(); this.closeModal(); this.closeNameEditModal(); this.closeReplaceConfirmModal();
+        document.getElementById('dashboard-screen').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+        this.loadUsers(); this.renderUserSelector(); lucide.createIcons();
+    },
+    saveChanges() {
+        const u=this.users[this.currentUserIndex]; if(!u) return;
+        u.data={bubbles:JSON.parse(JSON.stringify(this.bubbles)),links:JSON.parse(JSON.stringify(this.links)),categories:JSON.parse(JSON.stringify(this.categories)),favoriteColors:JSON.parse(JSON.stringify(this.favoriteColors))};
+        this.saveUsersToStorage(); this.hasUnsavedChanges=false;
+    },
+    checkUnsavedAndExit() { if(this.hasUnsavedChanges) document.getElementById('unsaved-modal').classList.remove('hidden'); else this.showLogin(); },
+    closeUnsavedModal() { document.getElementById('unsaved-modal').classList.add('hidden'); },
+
+    // ── MIGRATE VOTES ─────────────────────────────────────────────────────────
+    migrateLegacyVotes() {
+        for (let i=0;i<localStorage.length;i++) {
+            const key=localStorage.key(i); if(!key||!key.startsWith('vote_')) continue;
+            const match=key.match(/^vote_(\d+)_(\d+-\d+)$/); if(!match) continue;
+            const bubbleId=parseInt(match[1]), monthKey=match[2];
+            const bubble=this.bubbles.find(b=>b.id===bubbleId);
+            if (bubble) { if(!bubble.voteHistory) bubble.voteHistory=[]; if(!bubble.voteHistory.includes(monthKey)) bubble.voteHistory.push(monthKey); }
+        }
+    },
+
+    // ── VOTES ─────────────────────────────────────────────────────────────────
+    voteBubble(id,e) {
+        e.stopPropagation(); this.pushUndo();
+        const b=this.bubbles.find(bu=>bu.id===id); if(!b) return;
+        const now=new Date(), monthKey=`${now.getFullYear()}-${now.getMonth()}`, sk=`vote_${id}_${monthKey}`;
+        if(!b.voteHistory) b.voteHistory=[];
+        if (localStorage.getItem(sk)) { b.votes=Math.max(0,b.votes-1); localStorage.removeItem(sk); b.voteHistory=b.voteHistory.filter(mk=>mk!==monthKey); }
+        else { b.votes++; localStorage.setItem(sk,"true"); if(!b.voteHistory.includes(monthKey)) b.voteHistory.push(monthKey); }
+        this.hasUnsavedChanges=true; this.renderBubbles();
+    },
+
+    // ── CATEGORIES ────────────────────────────────────────────────────────────
+    updateCategoryList() { const l=document.getElementById('category-list'); if(!l) return; l.innerHTML=''; this.categories.forEach(c=>{ const o=document.createElement('option'); o.value=c; l.appendChild(o); }); },
+    addCategory(n) { if(n&&!this.categories.includes(n)){ this.categories.push(n); this.updateCategoryList(); } },
+    saveFavoriteColor() {
+        const c=document.getElementById('interest-color').value;
+        const defaults=["#3498db","#e74c3c","#2ecc71","#f1c40f","#9b59b6"];
+        if (defaults.includes(c)) return;
+        if (!this.favoriteColors.includes(c)) { this.favoriteColors.push(c); if(this.favoriteColors.length>5) this.favoriteColors.shift(); this.renderPresetColors(); }
+    },
+    renderPresetColors() {
+        const c=document.getElementById('preset-colors'); if(!c) return; c.innerHTML='';
+        const defaults=["#3498db","#e74c3c","#2ecc71","#f1c40f","#9b59b6","#ffffff","#000000"];
+        [...defaults,...this.favoriteColors].forEach(cl=>{
+            const d=document.createElement('div'); d.className='color-dot'; d.style.backgroundColor=cl;
+            if (cl==='#ffffff') d.style.border='2px solid #666';
+            if (cl==='#000000') d.style.border='2px solid #999';
+            d.onclick=()=>document.getElementById('interest-color').value=cl; c.appendChild(d);
+        });
+    },
+
+    // ── BUBBLE MODAL ──────────────────────────────────────────────────────────
+    openModal(id=null) {
+        const m=document.getElementById('bubble-modal'); const t=this.translations[this.lang]; if(!m) return;
+        m.classList.remove('hidden'); this.renderPresetColors();
+        if (id) {
+            const b=this.bubbles.find(bu=>bu.id===id);
+            document.getElementById('modal-title').innerText=t.editBubbleModal; document.getElementById('edit-id').value=id;
+            document.getElementById('interest-name').value=b.name; document.getElementById('interest-category').value=b.category||'';
+            document.getElementById('interest-tags').value=(b.tags||[]).join(', ');
+            document.getElementById('interest-desc').value=b.desc; document.getElementById('interest-color').value=b.color;
+            document.getElementById('interest-size').value=b.manualSize; document.getElementById('delete-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('modal-title').innerText=t.newBubbleModal; document.getElementById('edit-id').value='';
+            ['interest-name','interest-category','interest-tags','interest-desc'].forEach(id=>document.getElementById(id).value='');
+            document.getElementById('interest-color').value='#3498db'; document.getElementById('interest-size').value=0;
+            document.getElementById('delete-btn').classList.add('hidden');
+        }
+        lucide.createIcons();
+    },
+    closeModal() { const m=document.getElementById('bubble-modal'); if(m) m.classList.add('hidden'); },
+    saveBubble() {
+        const id=document.getElementById('edit-id').value;
+        const name=document.getElementById('interest-name').value||"Interés";
+        const cat=document.getElementById('interest-category').value.trim();
+        const tags=document.getElementById('interest-tags').value.split(',').map(t=>t.trim()).filter(t=>t.length>0);
+        const desc=document.getElementById('interest-desc').value;
+        const color=document.getElementById('interest-color').value;
+        const ms=parseInt(document.getElementById('interest-size').value);
+        this.pushUndo();
+        if (cat) this.addCategory(cat); tags.forEach(tag=>this.addCategory(tag));
+        if (id) {
+            const b=this.bubbles.find(bu=>bu.id==id);
+            b.name=name; b.category=cat; b.tags=tags; b.desc=desc; b.color=color; b.manualSize=ms;
+        } else {
+            const v=document.getElementById('viewport');
+            let sx=-this.panX+(v.clientWidth/2)/this.zoom, sy=-this.panY+(v.clientHeight/2)/this.zoom, att=0;
+            while(att<50){ if(!this.bubbles.some(bu=>Math.sqrt((bu.x-sx)**2+(bu.y-sy)**2)<(this.getBubbleRadius(bu)+60))) break; sx+=(Math.random()-.5)*200; sy+=(Math.random()-.5)*200; att++; }
+            this.bubbles.push({id:Date.now(),name,category:cat,tags,desc,color,votes:0,manualSize:ms,voteHistory:[],x:sx,y:sy,vx:0,vy:0});
+        }
+        this.hasUnsavedChanges=true; this.closeModal(); this.renderBubbles();
+    },
+    deleteBubble() {
+        const id=document.getElementById('edit-id').value; if(!id) return;
+        this.pushUndo();
+        this.bubbles=this.bubbles.filter(bu=>bu.id!=id);
+        this.links=this.links.filter(l=>l.source!=id&&l.target!=id);
+        this.hasUnsavedChanges=true; this.closeModal(); this.renderBubbles();
+    },
+
+    // ── LIST ──────────────────────────────────────────────────────────────────
+    renderList() {
+        const tbody=document.getElementById('list-tbody'); if(!tbody) return; tbody.innerHTML='';
+        this.bubbles.forEach(b=>{
+            const r=document.createElement('tr');
+            const tags=(b.tags||[]).map(t=>`<span class="tag-pill">${t}</span>`).join('');
+            r.innerHTML=`<td class="font-bold">${b.name}</td><td><span class="px-2 py-1 bg-gray-500/10 border border-gray-700 rounded text-xs" style="border-left:3px solid ${b.color}">${b.category||'—'}</span></td><td>${tags||'<span class="text-gray-600 text-xs">—</span>'}</td><td><div class="flex items-center gap-1 text-accent font-bold"><i data-lucide="star" class="w-3 h-3 fill-current"></i> ${b.votes}</div></td><td class="text-gray-500 text-xs">${new Date(b.id).toLocaleDateString()}</td><td class="text-right"><button onclick="app.openModal(${b.id})" class="p-2 hover:text-accent"><i data-lucide="edit-3" class="w-4 h-4"></i></button></td>`;
+            tbody.appendChild(r);
+        });
+        lucide.createIcons();
+    },
+    sortList(c) {
+        if (c==='name')     this.bubbles.sort((a,b)=>a.name.localeCompare(b.name));
+        if (c==='votes')    this.bubbles.sort((a,b)=>b.votes-a.votes);
+        if (c==='category') this.bubbles.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
+        if (c==='date')     this.bubbles.sort((a,b)=>b.id-a.id);
+        this.renderList();
+    },
+
+    // ── MONTHS ────────────────────────────────────────────────────────────────
+    renderMonths() {
+        const c=document.getElementById('months-grid'); if(!c) return; c.innerHTML='';
+        const t=this.translations[this.lang];
+        const selector=document.getElementById('month-selector');
+        const allKeys=new Set();
+        this.bubbles.forEach(b=>{ const d=new Date(b.id); allKeys.add(`${d.getFullYear()}-${d.getMonth()}`); (b.voteHistory||[]).forEach(mk=>allKeys.add(mk)); });
+        const sk=[...allKeys].sort().reverse();
+        if (!sk.length) { c.innerHTML=`<p class="text-gray-500 text-center py-20">${t.noActivity}</p>`; return; }
+        const prev=selector.value;
+        selector.innerHTML=`<option value="all">${t.allMonths}</option>`;
+        sk.forEach(k=>{ const [y,m]=k.split('-'); const n=new Date(parseInt(y),parseInt(m)).toLocaleString(this.lang,{month:'long',year:'numeric'}); const opt=document.createElement('option'); opt.value=k; opt.textContent=n; selector.appendChild(opt); });
+        if (prev==='all'||sk.includes(prev)) selector.value=prev; else { this.selectedMonthKey=sk[0]; selector.value=sk[0]; }
+        if (selector.value) this.selectedMonthKey=selector.value;
+
+        const renderCard=(k)=>{
+            const [y,m]=k.split('-');
+            const n=new Date(parseInt(y),parseInt(m)).toLocaleString(this.lang,{month:'long',year:'numeric'});
+            const created=this.bubbles.filter(b=>{ const d=new Date(b.id); return `${d.getFullYear()}-${d.getMonth()}`===k; });
+            const voted=this.bubbles.filter(b=>(b.voteHistory||[]).includes(k));
+            const div=document.createElement('div'); div.className='bg-dark-card p-6 rounded-2xl border border-gray-800 shadow-md';
+            div.innerHTML=`<h3 class="text-lg font-bold text-accent mb-4 capitalize border-b border-gray-800 pb-2">${n}</h3><div class="grid md:grid-cols-2 gap-4"><div><h4 class="text-xs text-gray-500 uppercase mb-2 font-semibold">${t.created} (${created.length})</h4><div class="space-y-1">${created.length?created.map(b=>`<div class="flex items-center justify-between bg-gray-500/10 p-2 rounded border border-gray-800 text-sm"><span style="border-left:2px solid ${b.color};padding-left:6px">${b.name}</span><span class="text-[10px] text-accent font-bold">${b.category||''}</span></div>`).join(''):'<p class="text-xs text-gray-600">—</p>'}</div></div><div><h4 class="text-xs text-gray-500 uppercase mb-2 font-semibold">${t.voted} (${voted.length})</h4><div class="space-y-1">${voted.length?voted.map(b=>`<div class="flex items-center justify-between bg-gray-500/10 p-2 rounded border border-gray-800 text-sm"><span style="border-left:2px solid ${b.color};padding-left:6px">${b.name}</span><span class="text-accent font-bold text-xs">★ ${b.votes}</span></div>`).join(''):'<p class="text-xs text-gray-600">—</p>'}</div></div></div>`;
+            c.appendChild(div);
+        };
+        if (this.selectedMonthKey==='all') sk.forEach(k=>renderCard(k)); else if (sk.includes(this.selectedMonthKey)) renderCard(this.selectedMonthKey);
+    },
+    handleMonthChange(v) { this.selectedMonthKey=v; this.renderMonths(); },
+
+    // ── STATS PERIOD ──────────────────────────────────────────────────────────
+    setStatsPeriod(mode, year=null, month=null) {
+        this.statsPeriod=mode; this.statsYear=year; this.statsMonth=month;
+        ['global','year','month'].forEach(m=>{ const btn=document.getElementById(`sfb-${m}`); if(btn) btn.classList.toggle('active',m===mode); });
+        const lbl=document.getElementById('stats-period-label');
+        if (mode==='global') lbl.textContent='';
+        else if (mode==='year') lbl.textContent=`${year}`;
+        else { const n=new Date(year,month).toLocaleString(this.lang,{month:'long',year:'numeric'}); lbl.textContent=n; }
+        document.getElementById('period-picker').classList.add('hidden');
+        this.renderStats();
+    },
+    openYearPicker() {
+        const keys=this._getMonthKeys();
+        const years=[...new Set(keys.map(k=>k.split('-')[0]))].sort().reverse();
+        this._showPicker('Seleccionar año', years.map(y=>({label:y, action:()=>this.setStatsPeriod('year',parseInt(y),null)})));
+    },
+    openMonthPicker() {
+        const keys=this._getMonthKeys();
+        const sk=[...new Set(keys)].sort().reverse();
+        this._showPicker('Seleccionar mes', sk.map(k=>{ const [y,m]=k.split('-'); const label=new Date(parseInt(y),parseInt(m)).toLocaleString(this.lang,{month:'long',year:'numeric'}); return {label, action:()=>this.setStatsPeriod('month',parseInt(y),parseInt(m))}; }));
+    },
+    _showPicker(title, items) {
+        document.getElementById('period-picker-title').textContent=title;
+        const el=document.getElementById('period-picker-options'); el.innerHTML='';
+        if (!items.length) { el.innerHTML='<p class="text-xs text-gray-500">Sin datos</p>'; }
+        items.forEach(item=>{ const b=document.createElement('button'); b.className='w-full text-left px-3 py-2 rounded-lg hover:bg-gray-500/20 text-sm'; b.textContent=item.label; b.onclick=item.action; el.appendChild(b); });
+        document.getElementById('period-picker').classList.remove('hidden');
+    },
+    _getMonthKeys() {
+        const keys=new Set();
+        this.bubbles.forEach(b=>{ const d=new Date(b.id); keys.add(`${d.getFullYear()}-${d.getMonth()}`); (b.voteHistory||[]).forEach(mk=>keys.add(mk)); });
+        return [...keys];
+    },
+    /** Filter bubbles/votes according to current stats period */
+    _filterBubbles() {
+        if (this.statsPeriod==='global') return { bubbles: this.bubbles, getVotes: b=>b.votes };
+        if (this.statsPeriod==='year') {
+            return {
+                bubbles: this.bubbles.filter(b=>(b.voteHistory||[]).some(mk=>mk.startsWith(`${this.statsYear}-`))),
+                getVotes: b=>(b.voteHistory||[]).filter(mk=>mk.startsWith(`${this.statsYear}-`)).length
+            };
+        }
+        if (this.statsPeriod==='month') {
+            const mk=`${this.statsYear}-${this.statsMonth}`;
+            return {
+                bubbles: this.bubbles.filter(b=>(b.voteHistory||[]).includes(mk)),
+                getVotes: b=>(b.voteHistory||[]).includes(mk)?1:0
+            };
+        }
+        return { bubbles: this.bubbles, getVotes: b=>b.votes };
+    },
+
+    // ── STATS RENDER ──────────────────────────────────────────────────────────
+    renderStats() {
+        const t=this.translations[this.lang];
+        const {bubbles, getVotes}=this._filterBubbles();
+        this.renderStatsCards(t, bubbles, getVotes);
+        this.renderCategoryChart(t, bubbles, getVotes);
+        this.renderMonthlyChart(t);
+        this.renderTopList(t, bubbles, getVotes);
+        this.populateBubbleSelect();
+        this.renderBubbleDetail();
+        this.populateCatSelect(bubbles);
+        this.renderCatDetail();
+        lucide.createIcons();
+    },
+
+    renderStatsCards(t, bubbles, getVotes) {
+        const el=document.getElementById('stats-cards'); if(!el) return;
+        const totalVotes=bubbles.reduce((s,b)=>s+getVotes(b),0);
+        const cats=new Set(bubbles.map(b=>b.category).filter(Boolean));
+        const monthly=this._getMonthlyVoteData();
+        const topMonth=Object.entries(monthly).sort((a,b)=>b[1]-a[1])[0];
+        const topLabel=topMonth?(()=>{ const [y,m]=topMonth[0].split('-'); return new Date(y,m).toLocaleString(this.lang,{month:'short',year:'numeric'}); })():'—';
+        // Consistency: bubbles voted ≥2 months
+        const consistent=this.bubbles.filter(b=>(b.voteHistory||[]).length>=2).length;
+        const cards=[
+            {label:t.statsTotal, value:bubbles.length, color:'#3b82f6'},
+            {label:t.statsTotalVotes, value:totalVotes, color:'#f39c12'},
+            {label:t.statsCategories, value:cats.size, color:'#2ecc71'},
+            {label:t.statsConsistent, value:consistent, color:'#9b59b6'},
+        ];
+        el.innerHTML=cards.map(c=>`<div class="stat-card text-center"><div class="text-3xl font-bold mb-1" style="color:${c.color}">${c.value}</div><div class="text-xs text-gray-500">${c.label}</div></div>`).join('');
+    },
+
+    renderCategoryChart(t, bubbles, getVotes) {
+        const el=document.getElementById('chart-categories'); if(!el) return;
+        const cats={};
+        bubbles.forEach(b=>{ const c=b.category||t.noCat; cats[c]=(cats[c]||0)+getVotes(b); });
+        const sorted=Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,10);
+        if (!sorted.length) { el.innerHTML=`<p class="text-xs text-gray-600">${t.noActivity}</p>`; return; }
+        const max=sorted[0][1]||1;
+        const colors=['#3b82f6','#f39c12','#2ecc71','#e74c3c','#9b59b6','#1abc9c','#e67e22','#34495e','#f1c40f','#3498db'];
+        el.innerHTML=sorted.map(([cat,count],i)=>`<div class="flex items-center gap-2 text-xs"><span class="text-gray-400 truncate w-24 flex-shrink-0">${cat}</span><div class="flex-grow bg-gray-700 rounded-full h-4 overflow-hidden"><div class="h-4 rounded-full flex items-center justify-end pr-1 text-[10px] font-bold text-black" style="width:${Math.max(8,(count/max)*100)}%;background:${colors[i%colors.length]}">${count}</div></div></div>`).join('');
+    },
+
+    _getMonthlyVoteData() {
+        const monthly={};
+        this.bubbles.forEach(b=>{ (b.voteHistory||[]).forEach(mk=>{ monthly[mk]=(monthly[mk]||0)+1; }); });
+        return monthly;
+    },
+
+    renderMonthlyChart(t) {
+        const el=document.getElementById('chart-monthly'); if(!el) return;
+        let monthly=this._getMonthlyVoteData();
+        // Filter by period for highlighting
+        const allKeys=Object.keys(monthly).sort();
+        if (!allKeys.length) { el.innerHTML=`<p class="text-xs text-gray-600 pt-8 text-center">${t.noVoteHistory}</p>`; return; }
+        const maxVal=Math.max(...Object.values(monthly))||1;
+        const barW=Math.min(40,Math.floor(300/allKeys.length));
+        const chartH=140; const svgW=Math.max(300,allKeys.length*(barW+6)); const svgH=chartH+30;
+        const isInPeriod=(k)=>{
+            if (this.statsPeriod==='global') return true;
+            if (this.statsPeriod==='year') return k.startsWith(`${this.statsYear}-`);
+            return k===`${this.statsYear}-${this.statsMonth}`;
+        };
+        const bars=allKeys.map((k,i)=>{
+            const v=monthly[k]; const [y,m]=k.split('-');
+            const label=new Date(parseInt(y),parseInt(m)).toLocaleString(this.lang,{month:'short'}).slice(0,3);
+            const barH=Math.max(4,(v/maxVal)*chartH); const x=i*(barW+6)+4; const y0=chartH-barH;
+            const inP=isInPeriod(k); const fill=inP?'#f39c12':'#4b5563';
+            return `<rect x="${x}" y="${y0}" width="${barW}" height="${barH}" fill="${fill}" rx="2" opacity="${inP?'.9':'.4'}"/>
+                <text x="${x+barW/2}" y="${chartH+14}" text-anchor="middle" font-size="8" fill="#888">${label}</text>
+                ${inP?`<text x="${x+barW/2}" y="${y0-3}" text-anchor="middle" font-size="8" fill="#f39c12" font-weight="bold">${v}</text>`:''}`;
+        }).join('');
+        el.innerHTML=`<svg viewBox="0 0 ${svgW} ${svgH}" class="w-full" style="overflow:visible"><line x1="0" y1="${chartH}" x2="${svgW}" y2="${chartH}" stroke="#374151" stroke-width="1"/>${bars}</svg>`;
+    },
+
+    renderTopList(t, bubbles, getVotes) {
+        const el=document.getElementById('stats-top-list'); if(!el) return;
+        const sorted=[...bubbles].sort((a,b)=>getVotes(b)-getVotes(a)).slice(0,8);
+        if (!sorted.length) { el.innerHTML=`<p class="text-xs text-gray-600">${t.noActivity}</p>`; return; }
+        const max=getVotes(sorted[0])||1;
+        el.innerHTML=sorted.map((b,i)=>`<div class="flex items-center gap-3"><span class="text-xs text-gray-600 w-4 text-right">${i+1}</span><div class="flex-grow"><div class="flex justify-between mb-1"><span class="text-sm font-medium" style="color:${b.color}">${b.name}</span><span class="text-xs text-accent font-bold">★ ${getVotes(b)}</span></div><div class="bg-gray-700 rounded-full h-1.5"><div class="h-1.5 rounded-full" style="width:${(getVotes(b)/max)*100}%;background:${b.color}"></div></div></div></div>`).join('');
+    },
+
+    populateBubbleSelect() {
+        const sel=document.getElementById('bubble-detail-select'); if(!sel) return;
+        const prev=sel.value; sel.innerHTML='';
+        const sorted=[...this.bubbles].sort((a,b)=>b.votes-a.votes);
+        sorted.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.textContent=b.name; sel.appendChild(o); });
+        if (prev&&sorted.find(b=>b.id==prev)) sel.value=prev;
+    },
+
+    renderBubbleDetail() {
+        const sel=document.getElementById('bubble-detail-select'); const el=document.getElementById('bubble-detail-content'); if(!sel||!el) return;
+        const b=this.bubbles.find(bu=>bu.id==sel.value); if(!b) { el.innerHTML=''; return; }
+        const monthly=this._getMonthlyVoteData(); // need per-bubble
+        const bMonthly={};
+        (b.voteHistory||[]).forEach(mk=>bMonthly[mk]=(bMonthly[mk]||0)+1);
+        const mKeys=Object.keys(bMonthly).sort();
+        const tags=(b.tags||[]).map(t=>`<span class="tag-pill">${t}</span>`).join('');
+        el.innerHTML=`
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:${b.color}"></div>
+                <span class="font-bold text-sm">${b.name}</span>
+                <span class="text-xs text-gray-500">★ ${b.votes} votos totales</span>
+            </div>
+            <div class="flex flex-wrap gap-1 mb-3">${tags||'<span class="text-xs text-gray-600">Sin etiquetas</span>'}</div>
+            <div class="text-xs text-gray-500 mb-1">Categoría: <span class="text-accent">${b.category||'—'}</span> · Creado: ${new Date(b.id).toLocaleDateString()}</div>
+            ${b.desc?`<div class="text-xs text-gray-400 italic mb-2">"${b.desc}"</div>`:''}
+            <div class="text-xs font-bold text-gray-500 uppercase mb-2 mt-3">Historial de votos</div>
+            ${mKeys.length?`<div class="flex flex-wrap gap-1">${mKeys.map(k=>{ const [y,m]=k.split('-'); const label=new Date(parseInt(y),parseInt(m)).toLocaleString(this.lang,{month:'short',year:'2-digit'}); return `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold" style="background:${b.color}22;color:${b.color};border:1px solid ${b.color}44">${label}</span>`; }).join('')}</div>`:'<p class="text-xs text-gray-600">Sin historial aún</p>'}`;
+    },
+
+    populateCatSelect(bubbles) {
+        const sel=document.getElementById('cat-detail-select'); if(!sel) return;
+        const prev=sel.value; sel.innerHTML='';
+        const cats=[...new Set(this.bubbles.map(b=>b.category||'Sin categoría'))].sort();
+        cats.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+        if (prev&&cats.includes(prev)) sel.value=prev;
+    },
+
+    renderCatDetail() {
+        const sel=document.getElementById('cat-detail-select'); const el=document.getElementById('cat-detail-content'); if(!sel||!el) return;
+        const cat=sel.value;
+        const items=this.bubbles.filter(b=>(b.category||'Sin categoría')===cat);
+        if (!items.length) { el.innerHTML='<p class="text-xs text-gray-600">Sin intereses en esta categoría</p>'; return; }
+        const totalVotes=items.reduce((s,b)=>s+b.votes,0);
+        const mostVoted=[...items].sort((a,b)=>b.votes-a.votes)[0];
+        const oldest=[...items].sort((a,b)=>a.id-b.id)[0];
+        el.innerHTML=`
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="text-center"><div class="text-xl font-bold text-accent">${items.length}</div><div class="text-xs text-gray-500">Intereses</div></div>
+                <div class="text-center"><div class="text-xl font-bold text-yellow-400">${totalVotes}</div><div class="text-xs text-gray-500">Votos</div></div>
+                <div class="text-center"><div class="text-xl font-bold text-green-400">${mostVoted?mostVoted.votes:0}</div><div class="text-xs text-gray-500">Max votos</div></div>
+            </div>
+            <div class="text-xs text-gray-500 mb-2">Más votado: <span class="font-bold text-accent">${mostVoted?.name||'—'}</span> · Más antiguo: <span class="font-bold text-gray-300">${oldest?.name||'—'}</span></div>
+            <div class="space-y-1 mt-3">
+                ${[...items].sort((a,b)=>b.votes-a.votes).map(b=>`<div class="flex items-center justify-between text-xs bg-gray-500/10 px-3 py-1.5 rounded border border-gray-800"><span style="color:${b.color};font-weight:600">${b.name}</span><span class="text-gray-400">★ ${b.votes}</span></div>`).join('')}
+            </div>`;
+    },
+
+    // ── AI ────────────────────────────────────────────────────────────────────
+    async analyzeWithAI() {
+        const t=this.translations[this.lang];
+        const resultEl=document.getElementById('ai-result'); const btn=document.getElementById('btn-analyze'); if(!resultEl) return;
+        resultEl.innerHTML=`<div class="flex items-center gap-3 text-gray-500 py-4"><span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span><span class="ml-2 text-xs">${t.analyzing}</span></div>`;
+        btn.disabled=true; btn.classList.add('opacity-60');
+        try {
+            const monthly=this._getMonthlyVoteData();
+            const topVoted=[...this.bubbles].sort((a,b)=>b.votes-a.votes).slice(0,8).map(b=>({name:b.name,votes:b.votes,category:b.category||''}));
+            const cats={}; this.bubbles.forEach(b=>{ const c=b.category||'Sin cat'; cats[c]=(cats[c]||0)+1; });
+            const payload={totalIntereses:this.bubbles.length,categorias:cats,masVotados:topVoted,actividadPorMes:monthly,totalVotos:this.bubbles.reduce((s,b)=>s+b.votes,0)};
+            const prompt=this.lang==='es'
+                ?`Eres un analista de perfil de curiosidades personales. Datos del usuario: ${JSON.stringify(payload)}. Escribe un análisis cálido y específico en 3-4 párrafos: patrones de interés, conexiones entre áreas, qué dice sobre su perfil intelectual, y qué podría explorar a continuación. Usa los datos reales. Responde solo en texto plano, sin markdown.`
+                :`You are a personal curiosity profile analyst. User data: ${JSON.stringify(payload)}. Write a warm, specific analysis in 3-4 paragraphs: interest patterns, connections between areas, what it says about their intellectual profile, and what they could explore next. Use the actual data. Respond in plain text only, no markdown.`;
+            // Using Pollinations.ai — free, no API key required
+            const response=await fetch('https://text.pollinations.ai/openai',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({model:'openai',messages:[{role:'user',content:prompt}],seed:42})
+            });
+            const data=await response.json();
+            const text=data.choices?.[0]?.message?.content||'';
+            if (!text) throw new Error('empty');
+            resultEl.innerHTML=text.split('\n').filter(p=>p.trim()).map(p=>`<p class="mb-3 leading-relaxed text-sm">${p}</p>`).join('');
+        } catch(err) {
+            resultEl.innerHTML=`<p class="text-red-400 text-xs">${t.aiError}</p>`;
+        }
+        btn.disabled=false; btn.classList.remove('opacity-60');
+    },
+
+    // ── MAP PHYSICS ───────────────────────────────────────────────────────────
+    animate() {
+        this.updatePhysics(); this.drawConnections(); this.updateBubblePositions(); this.updateMinimap();
+        requestAnimationFrame(()=>this.animate());
+    },
+    updatePhysics() {
+        const f=0.85, v=document.getElementById('viewport'); if(!v) return;
+        if (this.dragTarget&&!this.isResizing) {
+            this.dragTarget.x=(this.mousePos.x/this.zoom)-this.panX-this.dragOffset.x;
+            this.dragTarget.y=(this.mousePos.y/this.zoom)-this.panY-this.dragOffset.y;
+            this.dragTarget.vx=this.dragTarget.vy=0; this.hasUnsavedChanges=true;
+        } else if (this.isResizing&&this.resizeTarget) {
+            const dx=(this.mousePos.x/this.zoom)-this.panX-this.resizeTarget.x, dy=(this.mousePos.y/this.zoom)-this.panY-this.resizeTarget.y;
+            const minR=50+(this.resizeTarget.votes*1.5);
+            this.resizeTarget.manualSize=Math.max(0,Math.min(100,((Math.sqrt(dx*dx+dy*dy)-minR)/(150-minR))*100));
+            this.hasUnsavedChanges=true;
+        }
+        for (let i=0;i<this.bubbles.length;i++) {
+            let b1=this.bubbles[i];
+            for (let j=i+1;j<this.bubbles.length;j++) {
+                let b2=this.bubbles[j],dx=b2.x-b1.x,dy=b2.y-b1.y,dist=Math.sqrt(dx*dx+dy*dy);
+                let minD=this.getBubbleRadius(b1)+this.getBubbleRadius(b2)+10;
+                if (dist<minD&&dist>0) {
+                    let ov=minD-dist,nx=dx/dist,ny=dy/dist;
+                    if (this.dragTarget===b1||this.resizeTarget===b1){b2.x+=nx*ov;b2.y+=ny*ov;b2.vx+=nx*2;b2.vy+=ny*2;}
+                    else if (this.dragTarget===b2||this.resizeTarget===b2){b1.x-=nx*ov;b1.y-=ny*ov;b1.vx-=nx*2;b1.vy-=ny*2;}
+                    else{b1.x-=nx*ov*.5;b1.y-=ny*ov*.5;b2.x+=nx*ov*.5;b2.y+=ny*ov*.5;b1.vx-=nx;b1.vy-=ny;b2.vx+=nx;b2.vy+=ny;}
+                }
+            }
+            this.links.forEach(l=>{
+                let s=this.bubbles.find(bu=>bu.id===l.source),t=this.bubbles.find(bu=>bu.id===l.target); if(!s||!t) return;
+                let dx=t.x-s.x,dy=t.y-s.y,d=Math.sqrt(dx*dx+dy*dy);
+                let des=l.maxLength!==undefined?l.maxLength:Math.max(250,this.getBubbleRadius(s)+this.getBubbleRadius(t)+50);
+                if(d>des){let fr=(d-des)*.005; if(this.dragTarget!==s){s.vx+=(dx/d)*fr;s.vy+=(dy/d)*fr;} if(this.dragTarget!==t){t.vx-=(dx/d)*fr;t.vy-=(dy/d)*fr;}}
+            });
+            if(b1!==this.dragTarget&&b1!==this.resizeTarget){b1.x+=b1.vx;b1.y+=b1.vy;b1.vx*=f;b1.vy*=f;}
+        }
+    },
+    getBubbleRadius(bu) { let minR=50+(bu.votes*1.5); return Math.min(minR+((150-minR)*(bu.manualSize/100)),150); },
+
+    renderBubbles() {
+        const c=document.getElementById('bubble-container'); if(!c) return; c.innerHTML='';
+        const t=this.translations[this.lang];
+        this.bubbles.forEach(bu=>{
+            const r=this.getBubbleRadius(bu);
+            const el=document.createElement('div');
+            el.className='bubble'; el.id=`b-${bu.id}`;
+            el.style.width=el.style.height=`${r*2}px`;
+            const op=this.theme==='light'?'55':'33';
+            el.style.backgroundColor=bu.color+op;
+            el.style.borderColor=bu.color;
+            if (this.theme==='light'&&this.isLightColor(bu.color)) el.classList.add('light-color-outline');
+            const monthKey=`vote_${bu.id}_${new Date().getFullYear()}-${new Date().getMonth()}`;
+            const hv=localStorage.getItem(monthKey);
+            const displayName=bu.name.replace(/ /g,'\n');
+            el.innerHTML=`
+                <div class="bubble-content flex flex-col items-center justify-center">
+                    <span class="bubble-label text-sm uppercase font-semibold">${displayName}</span>
+                    <div class="flex items-center gap-1 mt-1">
+                        <i data-lucide="star" class="star-icon ${hv?'fill-[#f39c12] text-[#f39c12]':'text-gray-400'}"></i>
+                        <span class="vote-count font-bold">${bu.votes}</span>
+                    </div>
+                </div>
+                <div class="bubble-controls">
+                    <button class="control-btn" onclick="app.voteBubble(${bu.id},event)" title="${t.tipVote}"><i data-lucide="star" class="w-4 h-4 text-[#f39c12] ${hv?'fill-current':''}"></i></button>
+                    <button class="control-btn" onclick="app.openModal(${bu.id})" title="${t.tipEdit}"><i data-lucide="pencil" class="w-4 h-4 text-white pencil-icon"></i></button>
+                    <button class="control-btn" onmousedown="app.startLinking(${bu.id},event)" title="${t.tipLink}"><i data-lucide="link" class="w-4 h-4 text-blue-400"></i></button>
+                    <button class="control-btn" onclick="app.createNestedBubble(${bu.id},event)" title="${t.tipNest}"><i data-lucide="plus-circle" class="w-4 h-4 text-green-400"></i></button>
+                </div>
+                <div class="resize-handle" onmousedown="app.startResizing(${bu.id},event)"></div>`;
+            el.onmousedown=(e)=>{
+                if (e.target.closest('button')||e.target.classList.contains('resize-handle')) return;
+                if (this.currentTool!=='pointer') return;
+                this.dragTarget=bu;
+                const rect=document.getElementById('viewport').getBoundingClientRect();
+                this.dragOffset={x:((e.clientX-rect.left)/this.zoom)-this.panX-bu.x, y:((e.clientY-rect.top)/this.zoom)-this.panY-bu.y};
+                e.stopPropagation();
+            };
+            el.onmouseenter=()=>{ if(this.linkCandidate&&this.linkCandidate!==bu.id&&!this.areConnected(this.linkCandidate,bu.id)) this.linkHoverTarget=bu.id; };
+            el.onmouseleave=()=>{ if(this.linkHoverTarget===bu.id) this.linkHoverTarget=null; };
+            el.ondblclick=(e)=>{ e.stopPropagation(); this.openModal(bu.id); };
+            c.appendChild(el);
+        });
+        lucide.createIcons();
+    },
+
+    updateBubblePositions() {
+        this.bubbles.forEach(bu=>{
+            const el=document.getElementById(`b-${bu.id}`); if(!el) return;
+            const r=this.getBubbleRadius(bu);
+            el.style.width=el.style.height=`${r*2}px`;
+            el.style.transform=`translate(${(bu.x+this.panX)*this.zoom-r}px,${(bu.y+this.panY)*this.zoom-r}px) scale(${this.zoom})`;
+            const la=el.querySelector('.bubble-label'),vc=el.querySelector('.vote-count'),si=el.querySelector('.star-icon');
+            if(la) la.style.fontSize=`${Math.max(10,r/5)}px`;
+            if(vc) vc.style.fontSize=`${Math.max(8,r/10)}px`;
+            if(si){ const sz=Math.max(8,r/10); si.style.width=si.style.height=`${sz}px`; }
+            if(this.linkHoverTarget===bu.id||this.linkCandidate===bu.id) el.classList.add('highlight'); else el.classList.remove('highlight');
+        });
+    },
+
+    // ── CONNECTIONS ───────────────────────────────────────────────────────────
+    areConnected(id1,id2) { return this.links.some(l=>(l.source===id1&&l.target===id2)||(l.source===id2&&l.target===id1)); },
+
+    drawConnections() {
+        const svg=document.getElementById('connection-layer'); if(!svg) return; svg.innerHTML='';
+        this.links.forEach(l=>{ const s=this.bubbles.find(bu=>bu.id===l.source),t=this.bubbles.find(bu=>bu.id===l.target); if(s&&t) this.drawLine(svg,s,t,l); });
+        if (this.linkCandidate) {
+            const s=this.bubbles.find(bu=>bu.id===this.linkCandidate);
+            let tp=this.linkHoverTarget?this.bubbles.find(bu=>bu.id===this.linkHoverTarget):{x:(this.mousePos.x/this.zoom)-this.panX,y:(this.mousePos.y/this.zoom)-this.panY,isMouse:true};
+            this.drawLine(svg,s,tp,null,true);
+        }
+    },
+
+    drawLine(svg,s,t,linkObj,isTemp=false) {
+        const dx=t.x-s.x,dy=t.y-s.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist===0) return;
+        const rS=this.getBubbleRadius(s),rT=t.isMouse?0:this.getBubbleRadius(t);
+        const x1=s.x+(dx/dist)*rS,y1=s.y+(dy/dist)*rS,x2=t.x-(dx/dist)*rT,y2=t.y-(dy/dist)*rT;
+        const isH=this.currentTool==='scissors'&&this.hoveredLinkIdx===linkObj;
+        const isLocked=linkObj&&linkObj.maxLength!==undefined;
+        const isLockHover=this.currentTool==='lock'&&this.hoveredLinkIdx===linkObj;
+
+        // Effective color: adapt white/black cables by theme
+        let baseColor;
+        if (isTemp) baseColor='#3b82f6';
+        else if (this.currentTool==='scissors'&&isH) baseColor='#ef4444';
+        else if (this.currentTool==='scissors') baseColor='#e74c3c88';
+        else if (isLockHover) baseColor='#f39c12';
+        else if (isLocked) baseColor='#f59e0b';
+        else baseColor=this.getCableColor(s);
+
+        // Hit area for scissors / lock
+        if ((this.currentTool==='scissors'||this.currentTool==='lock')&&!isTemp) {
+            const hb=document.createElementNS("http://www.w3.org/2000/svg","line");
+            hb.setAttribute("x1",(x1+this.panX)*this.zoom); hb.setAttribute("y1",(y1+this.panY)*this.zoom);
+            hb.setAttribute("x2",(x2+this.panX)*this.zoom); hb.setAttribute("y2",(y2+this.panY)*this.zoom);
+            hb.setAttribute("stroke","rgba(0,0,0,0.01)"); hb.setAttribute("stroke-width",25*this.zoom);
+            hb.style.cursor='pointer'; hb.style.pointerEvents='all';
+            hb.onmouseenter=()=>this.hoveredLinkIdx=linkObj;
+            hb.onmouseleave=()=>{ if(this.hoveredLinkIdx===linkObj) this.hoveredLinkIdx=null; };
+            hb.onmousedown=(e)=>{
+                e.stopPropagation();
+                if (this.currentTool==='scissors'&&this.hoveredLinkIdx===linkObj) {
+                    this.pushUndo(); this.links=this.links.filter(l=>l!==linkObj); this.hasUnsavedChanges=true; this.hoveredLinkIdx=null;
+                } else if (this.currentTool==='lock'&&this.hoveredLinkIdx===linkObj) {
+                    this.toggleLinkLock(linkObj);
+                }
+            };
+            svg.appendChild(hb);
+        }
+
+        const l=document.createElementNS("http://www.w3.org/2000/svg","line");
+        l.setAttribute("x1",(x1+this.panX)*this.zoom); l.setAttribute("y1",(y1+this.panY)*this.zoom);
+        l.setAttribute("x2",(x2+this.panX)*this.zoom); l.setAttribute("y2",(y2+this.panY)*this.zoom);
+        l.setAttribute("stroke",baseColor);
+        l.setAttribute("stroke-width",(isTemp||isH||isLockHover?3.5:isLocked?2:1.5)*this.zoom);
+        if (this.currentTool==='scissors'&&!isTemp) l.setAttribute("stroke-dasharray","5,5");
+        if (isTemp) l.setAttribute("stroke-dasharray","4,4");
+        if (isLocked&&!isTemp) l.setAttribute("stroke-dasharray","8,3");
+        svg.appendChild(l);
+
+        // Lock badge
+        if (isLocked&&!isTemp) {
+            const mx=(x1+x2)/2,my=(y1+y2)/2;
+            const badge=document.createElementNS("http://www.w3.org/2000/svg","text");
+            badge.setAttribute("x",(mx+this.panX)*this.zoom); badge.setAttribute("y",(my+this.panY)*this.zoom-4);
+            badge.setAttribute("text-anchor","middle"); badge.setAttribute("font-size",10*this.zoom); badge.setAttribute("fill","#f59e0b"); badge.textContent="🔒";
+            svg.appendChild(badge);
+        }
+    },
+
+    toggleLinkLock(linkObj) {
+        const s=this.bubbles.find(b=>b.id===linkObj.source),t=this.bubbles.find(b=>b.id===linkObj.target); if(!s||!t) return;
+        this.pushUndo();
+        if (linkObj.maxLength!==undefined) delete linkObj.maxLength;
+        else { const dx=t.x-s.x,dy=t.y-s.y; linkObj.maxLength=Math.round(Math.sqrt(dx*dx+dy*dy)); }
+        this.hasUnsavedChanges=true;
+    },
+
+    createNestedBubble(parentId,e) {
+        e.stopPropagation(); this.pushUndo();
+        const parent=this.bubbles.find(b=>b.id===parentId); const id=Date.now();
+        const angle=Math.random()*Math.PI*2, dist=220;
+        this.bubbles.push({id,name:"Sub-Interés",category:parent.category,tags:[],desc:"",color:parent.color,votes:0,manualSize:0,voteHistory:[],x:parent.x+Math.cos(angle)*dist,y:parent.y+Math.sin(angle)*dist,vx:0,vy:0});
+        this.links.push({source:parentId,target:id});
+        this.hasUnsavedChanges=true; this.renderBubbles();
+    },
+
+    // ── TOOLS ────────────────────────────────────────────────────────────────
+    setTool(tool) {
+        this.currentTool=tool;
+        const v=document.getElementById('viewport');
+        ['pointer','scissors','lock'].forEach(t=>{ const btn=document.getElementById(`${t}-tool`); if(btn){ btn.classList.remove('active-blue','active','bg-red-600/20','bg-yellow-600/20'); btn.querySelector('i')?.setAttribute('style','color:'); } });
+        if (tool==='pointer') { document.getElementById('pointer-tool').classList.add('active-blue'); }
+        else if (tool==='scissors') { const b=document.getElementById('scissors-tool'); b.classList.add('active','bg-red-600/20'); }
+        else if (tool==='lock') { const b=document.getElementById('lock-tool'); b.classList.add('active','bg-yellow-600/20'); }
+        v.classList.toggle('scissors-cursor',tool==='scissors');
+        v.classList.toggle('lock-cursor',tool==='lock');
+        if (tool!=='scissors'&&tool!=='lock') this.hoveredLinkIdx=null;
+        lucide.createIcons();
+    },
+    toggleScissors(a) { this.setTool(a?'scissors':'pointer'); },
+
+    // ── CENTER ON DENSITY ─────────────────────────────────────────────────────
+    centerOnDensity() {
+        if (!this.bubbles.length) { this.zoom=1; this.panX=0; this.panY=0; return; }
+        const RADIUS=250;
+        let bestX=this.bubbles[0].x, bestY=this.bubbles[0].y, bestScore=-1;
+        this.bubbles.forEach(b=>{
+            const score=this.bubbles.reduce((s,o)=>{ const dx=o.x-b.x,dy=o.y-b.y; return s+(Math.sqrt(dx*dx+dy*dy)<RADIUS?1:0); },0);
+            if(score>bestScore){ bestScore=score; bestX=b.x; bestY=b.y; }
+        });
+        const v=document.getElementById('viewport'); if(!v) return;
+        this.panX=-bestX+(v.clientWidth/2)/this.zoom;
+        this.panY=-bestY+(v.clientHeight/2)/this.zoom;
+    },
+    zoomIn()  { this.zoom=Math.min(this.zoom*1.2,3); },
+    zoomOut() { this.zoom=Math.max(this.zoom*0.8,0.2); },
+    resetView() { this.zoom=1; this.panX=0; this.panY=0; },
+
+    // ── MINIMAP ───────────────────────────────────────────────────────────────
+    updateMinimap() {
+        const canvas=document.getElementById('minimap-canvas'),vp=document.getElementById('minimap-viewport'); if(!canvas) return;
+        const ctx=canvas.getContext('2d'); canvas.width=180; canvas.height=120; ctx.clearRect(0,0,180,120);
+        if(!this.bubbles.length) return;
+        const factor=0.05,offX=90,offY=60;
+        this.links.forEach(l=>{ const s=this.bubbles.find(bu=>bu.id===l.source),t=this.bubbles.find(bu=>bu.id===l.target); if(s&&t){ctx.strokeStyle="#444";ctx.beginPath();ctx.moveTo(s.x*factor+offX,s.y*factor+offY);ctx.lineTo(t.x*factor+offX,t.y*factor+offY);ctx.stroke();}});
+        this.bubbles.forEach(bu=>{ctx.fillStyle=bu.color;ctx.beginPath();ctx.arc(bu.x*factor+offX,bu.y*factor+offY,3,0,Math.PI*2);ctx.fill();});
+        vp.style.width=`${(window.innerWidth/this.zoom)*factor}px`; vp.style.height=`${(window.innerHeight/this.zoom)*factor}px`;
+        vp.style.left=`${(-this.panX)*factor+offX}px`; vp.style.top=`${(-this.panY)*factor+offY}px`;
+    },
+
+    // ── EVENT LISTENERS ───────────────────────────────────────────────────────
+    setupEventListeners() {
+        const v=document.getElementById('viewport'); if(!v) return;
+        v.onmousedown=(e)=>{ if(e.target.id==='viewport'||e.target.id==='bubble-container'||e.target.tagName==='svg'){this.isDragging=true;this.dragStart={x:e.clientX-this.panX*this.zoom,y:e.clientY-this.panY*this.zoom};} };
+        window.oncontextmenu=(e)=>{ if(this.currentTool!=='pointer'){e.preventDefault();this.setTool('pointer');} };
+        window.onmousemove=(e)=>{ const rect=v.getBoundingClientRect(); this.mousePos={x:(e.clientX-rect.left),y:(e.clientY-rect.top)}; if(this.isDragging&&!this.dragTarget){this.panX=(e.clientX-this.dragStart.x)/this.zoom;this.panY=(e.clientY-this.dragStart.y)/this.zoom;} };
+        window.onmouseup=()=>{ if(this.linkCandidate&&this.linkHoverTarget&&this.linkHoverTarget!==this.linkCandidate){if(!this.areConnected(this.linkCandidate,this.linkHoverTarget)){this.pushUndo();this.links.push({source:this.linkCandidate,target:this.linkHoverTarget});this.hasUnsavedChanges=true;}} this.isDragging=false;this.dragTarget=null;this.isResizing=false;this.resizeTarget=null;this.linkCandidate=null;this.linkHoverTarget=null; };
+        v.onwheel=(e)=>{ e.preventDefault(); this.zoom=Math.min(Math.max(this.zoom*(e.deltaY>0?.9:1.1),.2),3); };
+    },
+    startLinking(id,e) { e.stopPropagation(); this.linkCandidate=id; },
+    startResizing(id,e) { e.stopPropagation(); this.isResizing=true; this.resizeTarget=this.bubbles.find(bu=>bu.id===id); },
+
+    // ── NAME MODAL ────────────────────────────────────────────────────────────
+    openNameEditModal() { document.getElementById('new-user-name').value=this.users[this.currentUserIndex].name; document.getElementById('user-name-modal').classList.remove('hidden'); },
+    closeNameEditModal() { document.getElementById('user-name-modal').classList.add('hidden'); },
+    saveUserName() {
+        const n=document.getElementById('new-user-name').value.trim();
+        if(n&&!this.users.some((u,i)=>u&&u.name.toLowerCase()===n.toLowerCase()&&i!==this.currentUserIndex)){this.users[this.currentUserIndex].name=n;document.getElementById('display-user-name').textContent=n;this.saveUsersToStorage();this.closeNameEditModal();}
+        else if(n) alert('Nombre ya en uso');
+    },
+
+    // ── TRANSLATIONS ──────────────────────────────────────────────────────────
+    translations: {
+        es: {
+            appTitle:"Mis Intereses",selectUser:"Seleccionar Usuario:",selectLang:"Idioma / Language:",enter:"Entrar",createUser:"+ Crear Nuevo Usuario",usb:"USB",load:"Cargar",
+            menu:"Menú",map:"Mapa",list:"Lista",months:"Meses",stats:"Estadísticas",save:"Guardar",newBubble:"+ Nueva Burbuja",
+            listTitle:"Todos los Intereses",sortName:"Nombre",sortVotes:"Votos",sortCat:"Categoría",sortDate:"Fecha",
+            thName:"Interés",thCat:"Categoría",thTags:"Etiquetas",thVotes:"Votos",thDate:"Creado",thActions:"Acciones",
+            newBubbleModal:"Nuevo Interés",editBubbleModal:"Editar Interés",
+            lblNombre:"Nombre",lblCat:"Categoría principal",lblTags:"Etiquetas adicionales",lblColor:"Color",lblFav:"Favorito",lblDesc:"Descripción",lblSize:"Tamaño Manual",btnSave:"Guardar",
+            editUserTitle:"Cambiar nombre",unsavedTitle:"Cambios sin guardar",unsavedDesc:"Hay cambios sin guardar.",btnExit:"Salir sin guardar",btnContinue:"Seguir editando",btnCancel:"Cancelar",
+            noCat:"Sin categoría",created:"Creados",voted:"Votados",noActivity:"Sin actividad registrada.",monthTitle:"Cronología de Actividad",allMonths:"Todos los meses",lblViewMonth:"Ver mes:",
+            tipPointer:"Puntero",tipScissors:"Cortar cables",tipLock:"Fijar/liberar longitud de cable",tipPlus:"Zoom +",tipMinus:"Zoom -",tipReset:"Centrar en zona más densa",
+            tipVote:"Votar",tipEdit:"Editar",tipLink:"Unir",tipNest:"Anidar",
+            replaceTitle:"Límite alcanzado",replaceDesc:"Elige cuál reemplazar:",dupNameTitle:"Nombre duplicado",dupNameDesc:"Elige uno nuevo:",
+            delProfTitle:"¿Eliminar perfil?",delProfDesc:"Acción permanente.",delProfBtn:"Eliminar",
+            replaceConfirmTitle:"¿Confirmar reemplazo?",btnDownloadReplace:"Descargar copia y Reemplazar",btnJustReplace:"Reemplazar sin descargar",
+            statsTitle:"Estadísticas",statsByCat:"Por Categoría",statsMonthly:"Actividad Mensual",statsTop:"Top Intereses",
+            statsBubbleDetail:"Detalle por Burbuja",statsCatDetail:"Detalle por Categoría",
+            statsTotal:"Intereses",statsTotalVotes:"Votos",statsCategories:"Categorías",statsConsistent:"Interés constante (≥2 meses)",
+            analyzeBtn:"Analizar con IA",analyzing:"Analizando tus intereses...",aiTitle:"Análisis de IA",
+            aiPlaceholder:"Pulsa \"Analizar con IA\" para un análisis personalizado.",aiError:"Sin conexión con la IA.",
+            noVoteHistory:"Sin historial de votos aún."
+        },
+        en: {
+            appTitle:"My Interests",selectUser:"Select User:",selectLang:"Language / Idioma:",enter:"Enter",createUser:"+ Create New User",usb:"USB",load:"Load",
+            menu:"Menu",map:"Map",list:"List",months:"Months",stats:"Statistics",save:"Save",newBubble:"+ New Bubble",
+            listTitle:"All Interests",sortName:"Name",sortVotes:"Votes",sortCat:"Category",sortDate:"Date",
+            thName:"Interest",thCat:"Category",thTags:"Tags",thVotes:"Votes",thDate:"Created",thActions:"Actions",
+            newBubbleModal:"New Interest",editBubbleModal:"Edit Interest",
+            lblNombre:"Name",lblCat:"Primary category",lblTags:"Additional tags",lblColor:"Color",lblFav:"Favorite",lblDesc:"Description",lblSize:"Manual Size",btnSave:"Save",
+            editUserTitle:"Change name",unsavedTitle:"Unsaved changes",unsavedDesc:"Changes will be lost.",btnExit:"Exit without saving",btnContinue:"Stay",btnCancel:"Cancel",
+            noCat:"No category",created:"Created",voted:"Voted",noActivity:"No activity yet.",monthTitle:"Activity Timeline",allMonths:"All months",lblViewMonth:"View month:",
+            tipPointer:"Pointer",tipScissors:"Cut cables",tipLock:"Lock/unlock cable length",tipPlus:"Zoom In",tipMinus:"Zoom Out",tipReset:"Center on densest area",
+            tipVote:"Vote",tipEdit:"Edit",tipLink:"Link",tipNest:"Nest",
+            replaceTitle:"Limit reached",replaceDesc:"Select one to replace:",dupNameTitle:"Duplicate Name",dupNameDesc:"Choose new name:",
+            delProfTitle:"Delete profile?",delProfDesc:"Irreversible.",delProfBtn:"Delete",
+            replaceConfirmTitle:"Confirm Replacement?",btnDownloadReplace:"Download Backup & Replace",btnJustReplace:"Replace anyway",
+            statsTitle:"Statistics",statsByCat:"By Category",statsMonthly:"Monthly Activity",statsTop:"Top Interests",
+            statsBubbleDetail:"Bubble Detail",statsCatDetail:"Category Detail",
+            statsTotal:"Interests",statsTotalVotes:"Votes",statsCategories:"Categories",statsConsistent:"Consistent interest (≥2 months)",
+            analyzeBtn:"Analyze with AI",analyzing:"Analyzing your interests...",aiTitle:"AI Analysis",
+            aiPlaceholder:"Press \"Analyze with AI\" for a personalized analysis.",aiError:"Could not connect to AI.",
+            noVoteHistory:"No vote history yet."
+        }
+    }
+};
+
+window.onload = () => app.init();
+</script>
+</body>
+</html>

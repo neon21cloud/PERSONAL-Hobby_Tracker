@@ -1,0 +1,63 @@
+{
+  "name": "mis-intereses",
+  "productName": "Mis Intereses",
+  "version": "3.0.0",
+  "description": "Physics-based personal interest tracker with monthly voting, statistics and AI analysis",
+  "main": "main.js",
+  "author": "neon21cloud",
+  "license": "MIT",
+  "scripts": {
+    "start":        "electron .",
+    "build:win":    "electron-builder --win",
+    "build:mac":    "electron-builder --mac",
+    "build:linux":  "electron-builder --linux",
+    "build:all":    "electron-builder --win --mac --linux",
+    "pack":         "electron-builder --dir"
+  },
+  "devDependencies": {
+    "electron":         "^30.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "build": {
+    "appId":       "com.neon21cloud.mis-intereses",
+    "productName": "Mis Intereses",
+    "copyright":   "Copyright © 2026 neon21cloud",
+    "files": [
+      "main.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick":          false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon":     "assets/icon.ico",
+      "uninstallerIcon":   "assets/icon.ico",
+      "installerHeader":   "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "icon":     "assets/icon.png",
+      "category": "Utility"
+    }
+  }
+}
